@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<ruleset name="PHP_CodeSniffer">
+    <description>The coding standard for Hexlet project</description>
+    <file>.</file>
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <arg name="extensions" value="php"/>
+    <rule ref="PSR12"/>
+</ruleset>
