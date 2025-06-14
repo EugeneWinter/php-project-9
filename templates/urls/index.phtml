@@ -16,8 +16,8 @@
 
     <main class="flex-grow-1">
         <div class="container-lg mt-3">
-            <?php if (isset($flash) && $flash->getMessage('success')): ?>
-                <div class="alert alert-success"><?= $flash->getMessage('success')[0] ?></div>
+            <?php if (isset($success)): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
             <?php endif ?>
             
             <h1>Сайты</h1>
@@ -36,8 +36,8 @@
                             <tr>
                                 <td><?= htmlspecialchars($url['id']) ?></td>
                                 <td><a href="/urls/<?= $url['id'] ?>"><?= htmlspecialchars($url['name']) ?></a></td>
-                                <td><?= $url['last_check_date'] ?? '' ?></td>
-                                <td><?= $url['status_code'] ?? '' ?></td>
+                                <td><?= htmlspecialchars($url['last_check_date'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($url['status_code'] ?? '') ?></td>
                             </tr>
                         <?php endforeach ?>
                     </tbody>

@@ -16,8 +16,11 @@
 
     <main class="flex-grow-1">
         <div class="container-lg mt-3">
-            <?php if (isset($flash) && $flash->getMessage('success')): ?>
-                <div class="alert alert-success"><?= $flash->getMessage('success')[0] ?></div>
+            <?php if (isset($success)): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+            <?php endif ?>
+            <?php if (isset($error)): ?>
+                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
             <?php endif ?>
             
             <h1>Сайт: <?= htmlspecialchars($url['name']) ?></h1>
@@ -62,7 +65,7 @@
                         <?php foreach ($checks as $check): ?>
                             <tr>
                                 <td><?= htmlspecialchars($check['id']) ?></td>
-                                <td><?= htmlspecialchars($check['status_code']) ?></td>
+                                <td><?= htmlspecialchars($check['status_code'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($check['h1'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($check['title'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($check['description'] ?? '') ?></td>
