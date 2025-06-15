@@ -1,4 +1,5 @@
 PORT ?= 8000
+
 start:
 	PHP_CLI_SERVER_WORKERS=5 php -S 0.0.0.0:$(PORT) -t public
 
@@ -9,10 +10,24 @@ lint-fix:
 	composer exec --verbose phpcbf -- --standard=PSR12 src public
 
 install:
-	composer install --ignore-platform-reqs
+	composer install --ignore-platform-reqs --no-scripts
+	composer dump-autoload --optimize
 
 setup:
 	docker build -t url-checker .
-	docker run -it --rm -p 8000:8000 -v $(pwd):/app url-checker
+	docker run -it --rm \
+		-p $(PORT):$(PORT) \
+		-v "$(CURDIR):/app" \
+		-e PORT=$(PORT) \
+		url-checker \
+		sh -c "git config --global --add safe.directory /app && make install && make start"
 
-.PHONY: start install setup lint lint-fix
+docker-setup:
+	docker-compose down
+	docker-compose build
+	docker-compose up
+
+test:
+	composer exec phpunit
+
+.PHONY: start install setup docker-setup lint lint-fix test

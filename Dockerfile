@@ -7,9 +7,9 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_pgsql \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git config --global --add safe.directory /app
+RUN git config --global --add safe.directory /project/code
 
-WORKDIR /app
+WORKDIR /project/code
 
 RUN curl -sS https://getcomposer.org/installer | php -- \
     --install-dir=/usr/local/bin --filename=composer
