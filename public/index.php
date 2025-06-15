@@ -8,6 +8,9 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
 use Slim\Views\PhpRenderer;
 use DI\Container;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+use DiDom\Document;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -123,10 +126,14 @@ $app->get('/urls', function (Request $request, Response $response) {
     $stmt = $db->query('
         SELECT u.id, u.name, 
                MAX(uc.created_at) as last_check_date,
-               uc.status_code
+               (SELECT uc2.status_code 
+                FROM url_checks uc2 
+                WHERE uc2.url_id = u.id 
+                ORDER BY uc2.created_at DESC 
+                LIMIT 1) as status_code
         FROM urls u
         LEFT JOIN url_checks uc ON u.id = uc.url_id
-        GROUP BY u.id, uc.status_code
+        GROUP BY u.id
         ORDER BY u.id DESC
     ');
     $urls = new Collection($stmt->fetchAll());
@@ -163,6 +170,7 @@ $app->get('/urls/{id}', function (Request $request, Response $response, $args) {
 })->setName('urls.show');
 
 $app->post('/urls/{id}/checks', function (Request $request, Response $response, $args) {
+    error_log('Check URL endpoint hit');
     $urlId = $args['id'];
     $db = $this->get('db');
     $flash = $this->get('flash');
@@ -176,11 +184,37 @@ $app->post('/urls/{id}/checks', function (Request $request, Response $response, 
     }
     
     try {
-        $stmt = $db->prepare('INSERT INTO url_checks (url_id, created_at) VALUES (?, ?)');
-        $stmt->execute([$urlId, Carbon::now()]);
+        $client = new Client();
+        $res = $client->request('GET', $url['name'], [
+            'timeout' => 5,
+            'http_errors' => false
+        ]);
+        
+        $statusCode = $res->getStatusCode();
+        $body = (string)$res->getBody();
+        
+        $document = new Document($body);
+        $h1 = optional($document->first('h1'))->text();
+        $title = optional($document->first('title'))->text();
+        $description = optional($document->first('meta[name=description]'))->getAttribute('content');
+        
+        $stmt = $db->prepare('
+            INSERT INTO url_checks 
+            (url_id, status_code, h1, title, description, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        ');
+        $stmt->execute([
+            $urlId, 
+            $statusCode,
+            $h1,
+            $title,
+            $description,
+            Carbon::now()
+        ]);
+        
         $flash->addMessage('success', 'Страница успешно проверена');
-    } catch (PDOException $e) {
-        $flash->addMessage('error', 'Ошибка при проверке страницы');
+    } catch (RequestException $e) {
+        $flash->addMessage('error', 'Произошла ошибка при проверке: ' . $e->getMessage());
     }
     
     return $response->withHeader('Location', "/urls/{$urlId}")->withStatus(302);
