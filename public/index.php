@@ -10,59 +10,44 @@ use Slim\Views\PhpRenderer;
 use DI\Container;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ConnectException;
 use DiDom\Document;
+use Slim\Flash\Messages;
+use Selective\BasePath\BasePathMiddleware;
+use Illuminate\Support\Str;
 
 require __DIR__ . '/../vendor/autoload.php';
+
+try {
+    $pdo = new PDO(
+        "pgsql:host=localhost;port=5432;dbname=url_checker",
+        "postgres",
+        "1337"
+    );
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
+}
+
+session_start();
 
 $container = new Container();
 AppFactory::setContainer($container);
 $app = AppFactory::create();
 
+$app->add(new BasePathMiddleware($app));
+
 $container->set('flash', function () {
-    return new class {
-        private $messages = [];
-        
-        public function addMessage($key, $message) {
-            $this->messages[$key][] = $message;
-        }
-        
-        public function getMessages() {
-            $messages = $this->messages;
-            $this->messages = [];
-            return $messages;
-        }
-    };
+    return new Messages();
 });
 
 $container->set('view', function () {
     return new PhpRenderer(__DIR__ . '/../templates');
 });
 
-$databaseUrl = getenv('DATABASE_URL') ?: 'pgsql://postgres:1337@localhost:5432/url_checker';
-$databaseUrl = parse_url($databaseUrl);
-
-$dbConfig = [
-    'host' => $databaseUrl['host'],
-    'port' => $databaseUrl['port'] ?? 5432,
-    'dbname' => ltrim($databaseUrl['path'], '/'),
-    'user' => $databaseUrl['user'],
-    'pass' => $databaseUrl['pass']
-];
-
-$dsn = sprintf(
-    'pgsql:host=%s;port=%d;dbname=%s',
-    $dbConfig['host'],
-    $dbConfig['port'],
-    $dbConfig['dbname']
-);
-
-try {
-    $pdo = new PDO($dsn, $dbConfig['user'], $dbConfig['pass']);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $container->set('db', $pdo);
-} catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
-}
+$container->set('db', function () use ($pdo) {
+    return $pdo;
+});
 
 $app->addErrorMiddleware(true, true, true);
 
@@ -112,7 +97,7 @@ $app->post('/urls', function (Request $request, Response $response) {
         
         return $response->withHeader('Location', "/urls/{$id}")->withStatus(302);
     } catch (PDOException $e) {
-        $flash->addMessage('error', 'Ошибка при сохранении URL');
+        $flash->addMessage('error', 'Ошибка при сохранении URL: ' . $e->getMessage());
         return $response->withHeader('Location', '/')->withStatus(302);
     }
 })->setName('urls.store');
@@ -143,26 +128,32 @@ $app->get('/urls/{id}', function (Request $request, Response $response, $args) {
     $id = $args['id'];
     $db = $this->get('db');
     
-    $stmt = $db->prepare('SELECT * FROM urls WHERE id = ?');
-    $stmt->execute([$id]);
-    $url = $stmt->fetch();
-    
-    if (!$url) {
-        return $response->withStatus(404);
+    try {
+        $stmt = $db->prepare('SELECT * FROM urls WHERE id = ?');
+        $stmt->execute([$id]);
+        $url = $stmt->fetch();
+        
+        if (!$url) {
+            return $response->withStatus(404);
+        }
+        
+        $stmt = $db->prepare('SELECT * FROM url_checks WHERE url_id = ? ORDER BY id DESC');
+        $stmt->execute([$id]);
+        $checks = new Collection($stmt->fetchAll());
+        
+        $flash = $this->get('flash')->getMessages();
+        
+        return $this->get('view')->render($response, 'urls/show.phtml', [
+            'url' => $url,
+            'checks' => $checks,
+            'success' => $flash['success'][0] ?? null,
+            'error' => $flash['error'][0] ?? null,
+            'warning' => $flash['warning'][0] ?? null
+        ]);
+    } catch (PDOException $e) {
+        $this->get('flash')->addMessage('error', 'Database error: ' . $e->getMessage());
+        return $response->withStatus(500);
     }
-    
-    $stmt = $db->prepare('SELECT * FROM url_checks WHERE url_id = ? ORDER BY id DESC');
-    $stmt->execute([$id]);
-    $checks = new Collection($stmt->fetchAll());
-    
-    $flash = $this->get('flash')->getMessages();
-    
-    return $this->get('view')->render($response, 'urls/show.phtml', [
-        'url' => $url,
-        'checks' => $checks,
-        'success' => $flash['success'][0] ?? null,
-        'error' => $flash['error'][0] ?? null
-    ]);
 })->setName('urls.show');
 
 $app->post('/urls/{id}/checks', function (Request $request, Response $response, $args) {
@@ -170,54 +161,60 @@ $app->post('/urls/{id}/checks', function (Request $request, Response $response, 
     $db = $this->get('db');
     $flash = $this->get('flash');
     
-    $stmt = $db->prepare('SELECT * FROM urls WHERE id = ?');
-    $stmt->execute([$urlId]);
-    $url = $stmt->fetch();
-    
-    if (!$url) {
-        return $response->withStatus(404);
-    }
-    
     try {
+        $stmt = $db->prepare('SELECT * FROM urls WHERE id = ?');
+        $stmt->execute([$urlId]);
+        $url = $stmt->fetch();
+        
+        if (!$url) {
+            return $response->withStatus(404);
+        }
+        
         $client = new Client([
             'timeout' => 5,
             'allow_redirects' => true,
-            'http_errors' => false
+            'http_errors' => false,
+            'verify' => false
         ]);
         
-        $res = $client->request('GET', $url['name']);
-        $statusCode = $res->getStatusCode();
-        $body = (string)$res->getBody();
+        try {
+            $res = $client->request('GET', $url['name']);
+            $statusCode = $res->getStatusCode();
+            $body = (string)$res->getBody();
+            
+            $document = new Document($body);
+            $h1 = $document->first('h1') ? Str::limit($document->first('h1')->text(), 252, '...') : '';
+            $title = $document->first('title') ? Str::limit($document->first('title')->text(), 252, '...') : '';
+            $description = $document->first('meta[name=description]') 
+                ? Str::limit($document->first('meta[name=description]')->getAttribute('content'), 252, '...')
+                : '';
+                
+            $stmt = $db->prepare('
+                INSERT INTO url_checks 
+                (url_id, status_code, h1, title, description, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            ');
+            $stmt->execute([
+                $urlId, 
+                $statusCode,
+                $h1,
+                $title,
+                $description,
+                Carbon::now()
+            ]);
+            
+            $flash->addMessage('success', 'Страница успешно проверена');
+        } catch (ConnectException $e) {
+            $flash->addMessage('error', 'Не удалось подключиться к сайту: ' . $e->getMessage());
+        } catch (RequestException $e) {
+            $flash->addMessage('warning', 'Ошибка при выполнении запроса: ' . $e->getMessage());
+        }
         
-        $document = new Document($body);
-        $h1 = $document->first('h1') ? $document->first('h1')->text() : '';
-        $title = $document->first('title') ? $document->first('title')->text() : '';
-        $description = $document->first('meta[name=description]') 
-            ? $document->first('meta[name=description]')->getAttribute('content') 
-            : '';
-        
-        $stmt = $db->prepare('
-            INSERT INTO url_checks 
-            (url_id, status_code, h1, title, description, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?)
-        ');
-        $stmt->execute([
-            $urlId, 
-            $statusCode,
-            $h1,
-            $title,
-            $description,
-            Carbon::now()
-        ]);
-        
-        $flash->addMessage('success', 'Страница успешно проверена');
-    } catch (RequestException $e) {
-        $flash->addMessage('error', 'Произошла ошибка при проверке: ' . $e->getMessage());
-    } catch (Exception $e) {
-        $flash->addMessage('error', 'Непредвиденная ошибка');
+        return $response->withHeader('Location', "/urls/{$urlId}")->withStatus(302);
+    } catch (PDOException $e) {
+        $flash->addMessage('error', 'Ошибка базы данных: ' . $e->getMessage());
+        return $response->withHeader('Location', '/')->withStatus(302);
     }
-    
-    return $response->withHeader('Location', "/urls/{$urlId}")->withStatus(302);
 })->setName('urls.checks');
 
 function normalizeUrl(string $url): string

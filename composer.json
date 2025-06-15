@@ -3,29 +3,27 @@
     "description": "Hexlet project",
     "type": "project",
     "require": {
-        "slim/slim": "^4.14",
-        "slim/psr7": "^1.7",
-        "slim/php-view": "^3.4",
-        "vlucas/valitron": "^1.4",
-        "nesbot/carbon": "^3.10",
-        "illuminate/support": "^12.18",
-        "vlucas/phpdotenv": "^5.6",
-        "slim/http": "^1.4",
-        "illuminate/collections": "^12.18",
-        "php-di/php-di": "^7.0",
-        "guzzlehttp/guzzle": "^7.9",
         "ext-pdo": "*",
-        "ext-pdo_pgsql": "*"
+        "ext-pdo_pgsql": "*",
+        "guzzlehttp/guzzle": "^7.9",
+        "illuminate/collections": "^12.18",
+        "illuminate/support": "^12.18",
+        "imangazaliev/didom": "^2.0",
+        "monolog/monolog": "^3.7",
+        "nesbot/carbon": "^3.10",
+        "php-di/php-di": "^7.0",
+        "selective/basepath": "^2.3",
+        "slim/flash": "^0.4.0",
+        "slim/http": "^1.4",
+        "slim/php-view": "^3.4",
+        "slim/psr7": "^1.7",
+        "slim/slim": "^4.14",
+        "vlucas/phpdotenv": "^5.6",
+        "vlucas/valitron": "^1.4"
     },
     "require-dev": {
-        "squizlabs/php_codesniffer": "^3.7"
-    },
-    "scripts": {
-        "phpcs": "phpcs",
-        "phpcbf": "phpcbf",
-        "post-install-cmd": [
-            "@composer dump-autoload -o"
-        ]
+        "squizlabs/php_codesniffer": "^3.7",
+        "symfony/var-dumper": "^7.1"
     },
     "config": {
         "optimize-autoloader": true,
@@ -38,5 +36,12 @@
         "psr-4": {
             "App\\": "src/"
         }
+    },
+    "scripts": {
+        "phpcs": "phpcs",
+        "phpcbf": "phpcbf",
+        "post-install-cmd": [
+            "@composer dump-autoload -o"
+        ]
     }
 }
