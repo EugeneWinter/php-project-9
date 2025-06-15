@@ -14,10 +14,6 @@ use DiDom\Document;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 $container = new Container();
 AppFactory::setContainer($container);
 $app = AppFactory::create();
@@ -170,7 +166,6 @@ $app->get('/urls/{id}', function (Request $request, Response $response, $args) {
 })->setName('urls.show');
 
 $app->post('/urls/{id}/checks', function (Request $request, Response $response, $args) {
-    error_log('Check URL endpoint hit');
     $urlId = $args['id'];
     $db = $this->get('db');
     $flash = $this->get('flash');
@@ -184,19 +179,22 @@ $app->post('/urls/{id}/checks', function (Request $request, Response $response, 
     }
     
     try {
-        $client = new Client();
-        $res = $client->request('GET', $url['name'], [
+        $client = new Client([
             'timeout' => 5,
+            'allow_redirects' => true,
             'http_errors' => false
         ]);
         
+        $res = $client->request('GET', $url['name']);
         $statusCode = $res->getStatusCode();
         $body = (string)$res->getBody();
         
         $document = new Document($body);
-        $h1 = optional($document->first('h1'))->text();
-        $title = optional($document->first('title'))->text();
-        $description = optional($document->first('meta[name=description]'))->getAttribute('content');
+        $h1 = $document->first('h1') ? $document->first('h1')->text() : '';
+        $title = $document->first('title') ? $document->first('title')->text() : '';
+        $description = $document->first('meta[name=description]') 
+            ? $document->first('meta[name=description]')->getAttribute('content') 
+            : '';
         
         $stmt = $db->prepare('
             INSERT INTO url_checks 
@@ -215,6 +213,8 @@ $app->post('/urls/{id}/checks', function (Request $request, Response $response, 
         $flash->addMessage('success', 'Страница успешно проверена');
     } catch (RequestException $e) {
         $flash->addMessage('error', 'Произошла ошибка при проверке: ' . $e->getMessage());
+    } catch (Exception $e) {
+        $flash->addMessage('error', 'Непредвиденная ошибка');
     }
     
     return $response->withHeader('Location', "/urls/{$urlId}")->withStatus(302);
