@@ -10,6 +10,7 @@ lint-fix:
 	composer exec --verbose phpcbf -- --standard=PSR12 src public
 
 install:
+	git config --global --add safe.directory /app
 	composer install --ignore-platform-reqs --no-scripts
 	composer dump-autoload --optimize
 
