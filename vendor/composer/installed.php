@@ -3,7 +3,7 @@
         'name' => 'hexlet/code',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '5d0f7ddf0eb5460375deb672434130136ad0ac34',
+        'reference' => '26955d01fe0da92ee8df2bb4784fe405a40a832a',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -76,7 +76,7 @@
         'hexlet/code' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '5d0f7ddf0eb5460375deb672434130136ad0ac34',
+            'reference' => '26955d01fe0da92ee8df2bb4784fe405a40a832a',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
