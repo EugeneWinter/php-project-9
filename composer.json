@@ -28,6 +28,7 @@
     },
     "config": {
         "optimize-autoloader": false,
+        "classmap-authoritative": false,
         "sort-packages": true,
         "platform": {
             "php": "8.0"
