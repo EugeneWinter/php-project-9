@@ -44,9 +44,6 @@ $container->set('flash', function () {
 
 $container->set('view', function () {
     $templatePath = __DIR__ . '/../templates';
-    if (!is_dir($templatePath)) {
-        throw new RuntimeException("Template directory not found: {$templatePath}");
-    }
     return new PhpRenderer($templatePath);
 });
 
@@ -62,25 +59,11 @@ $app->get('/favicon.ico', function (Request $request, Response $response) {
 
 $app->get('/', function (Request $request, Response $response) {
     $flash = $this->get('flash')->getMessages();
-    error_log("Rendering index template");
-    $templatePath = $this->get('view')->getTemplatePath();
-    error_log("Template path: {$templatePath}");
-
-    try {
-        $response = $this->get('view')->render($response, 'index.phtml', [
-            'error' => $flash['error'][0] ?? null,
-            'url' => $flash['url'][0] ?? null
-        ]);
-
-        $body = (string)$response->getBody();
-        error_log("Response body length: " . strlen($body));
-        error_log("Title tag exists: " . (strpos($body, '<title>') !== false ? 'yes' : 'no'));
-
-        return $response;
-    } catch (Exception $e) {
-        error_log("Template rendering error: " . $e->getMessage());
-        throw $e;
-    }
+    return $this->get('view')->render($response, 'index.phtml', [
+        'pageTitle' => 'Анализатор страниц',
+        'error' => $flash['error'][0] ?? null,
+        'url' => $flash['url'][0] ?? null
+    ]);
 })->setName('home');
 
 $app->post('/urls', function (Request $request, Response $response) {
