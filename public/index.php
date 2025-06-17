@@ -65,17 +65,17 @@ $app->get('/', function (Request $request, Response $response) {
     error_log("Rendering index template");
     $templatePath = $this->get('view')->getTemplatePath();
     error_log("Template path: {$templatePath}");
-    
+
     try {
         $response = $this->get('view')->render($response, 'index.phtml', [
             'error' => $flash['error'][0] ?? null,
             'url' => $flash['url'][0] ?? null
         ]);
-        
+
         $body = (string)$response->getBody();
         error_log("Response body length: " . strlen($body));
         error_log("Title tag exists: " . (strpos($body, '<title>') !== false ? 'yes' : 'no'));
-        
+
         return $response;
     } catch (Exception $e) {
         error_log("Template rendering error: " . $e->getMessage());
