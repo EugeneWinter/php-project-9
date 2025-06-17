@@ -2,11 +2,11 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "8080:8080"
     volumes:
       - .:/project
     environment:
-      - PORT=8000
+      - PORT=8080
 
   db:
     image: postgres:15
