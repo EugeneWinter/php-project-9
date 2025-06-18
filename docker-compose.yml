@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build: .
@@ -7,6 +9,8 @@ services:
       - .:/project
     environment:
       - PORT=8080
+    depends_on:
+      - db
 
   db:
     image: postgres:15
@@ -16,6 +20,11 @@ services:
       POSTGRES_DB: url_checker
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:

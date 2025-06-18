@@ -1,5 +1,12 @@
 <?php
 
+// Важно: НИКАКИХ пробелов или символов перед <?php
+
+// Инициализация сессии в самом начале
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
 use Carbon\Carbon;
 use Valitron\Validator;
 use Illuminate\Support\Collection;
@@ -21,7 +28,7 @@ require __DIR__ . '/../src/UrlHelper.php';
 
 try {
     $pdo = new PDO(
-        "pgsql:host=localhost;port=5432;dbname=url_checker",
+        "pgsql:host=db;port=5432;dbname=url_checker",
         "postgres",
         "1337"
     );
@@ -30,13 +37,19 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
-session_start();
-
 $container = new Container();
 AppFactory::setContainer($container);
 $app = AppFactory::create();
 $app->setBasePath('');
 $app->add(new BasePathMiddleware($app));
+
+// Добавляем middleware для сессий перед определением flash
+$app->add(function ($request, $handler) {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    return $handler->handle($request);
+});
 
 $container->set('flash', function () {
     return new Messages();
