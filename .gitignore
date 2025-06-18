@@ -1,1 +1,5 @@
 /vendor/
+.env
+chmod
+init-db.sh
+docker-compose.yml
