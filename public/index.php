@@ -49,7 +49,7 @@ try {
 $container = new Container();
 AppFactory::setContainer($container);
 $app = AppFactory::create();
-$app->setBasePath('');
+$app->setBasePath('/');
 $app->add(new BasePathMiddleware($app));
 
 $app->add(function ($request, $handler) {

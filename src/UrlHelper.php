@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Функция для нормализации URL
- * 
+ *
  * @param string $url Исходный URL
  * @return string Нормализованный URL
  * @throws InvalidArgumentException
