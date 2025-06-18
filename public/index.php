@@ -39,7 +39,7 @@ try {
         getenv('DB_PORT') ?: 5432,
         getenv('DB_NAME') ?: 'url_checker'
     );
-    
+
     $pdo = new PDO(
         $dsn,
         getenv('DB_USER') ?: 'postgres',
@@ -83,20 +83,7 @@ $container->set('db', function () use ($pdo) {
     return $pdo;
 });
 
-$errorMiddleware = $app->addErrorMiddleware(true, true, true);
-$errorMiddleware->setDefaultErrorHandler(function (
-    Request $request,
-    Throwable $exception,
-    bool $displayErrorDetails,
-    bool $logErrors,
-    bool $logErrorDetails
-) use ($app) {
-    $payload = ['error' => $exception->getMessage()];
-    $response = $app->getResponseFactory()->createResponse();
-    $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE));
-    return $response->withStatus(500)
-                   ->withHeader('Content-Type', 'application/json');
-});
+$app->addErrorMiddleware(true, true, true);
 
 $app->get('/favicon.ico', function (Request $request, Response $response) {
     return $response->withStatus(204);

@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build: 
@@ -9,7 +11,6 @@ services:
       - .:/app
     environment:
       PORT: 8080
-      DATABASE_URL: "postgresql://postgres:1337@db:5432/url_checker?charset=utf8"
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: url_checker
@@ -23,14 +24,14 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:15-alpine
+    image: postgres:15
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1337
       POSTGRES_DB: url_checker
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d url_checker"]
       interval: 5s
