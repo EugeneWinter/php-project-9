@@ -4,13 +4,13 @@ set -e
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     DROP TABLE IF EXISTS url_checks;
     DROP TABLE IF EXISTS urls;
-    
+
     CREATE TABLE urls (
         id BIGSERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
-    
+
     CREATE TABLE url_checks (
         id BIGSERIAL PRIMARY KEY,
         url_id BIGINT REFERENCES urls(id),
