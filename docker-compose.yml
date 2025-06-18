@@ -1,33 +1,48 @@
-version: '3.8'
-
 services:
   app:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     volumes:
-      - .:/project
+      - .:/app
     environment:
-      - PORT=8080
-      - DATABASE_URL=pgsql://postgres:1337@db:5432/url_checker
+      PORT: 8080
+      DATABASE_URL: "postgresql://postgres:1337@db:5432/url_checker?charset=utf8"
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: url_checker
+      DB_USER: postgres
+      DB_PASSWORD: 1337
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
 
   db:
-    image: postgres:15
+    image: postgres:15-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1337
       POSTGRES_DB: url_checker
     volumes:
-      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - pgdata:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d url_checker"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+    restart: unless-stopped
 
 volumes:
   pgdata:
+
+networks:
+  app-network:
+    driver: bridge
