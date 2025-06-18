@@ -51,7 +51,7 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
-    
+
     $pdo->query('SELECT 1')->fetch();
 } catch (PDOException $e) {
     error_log('Database connection error: ' . $e->getMessage());
