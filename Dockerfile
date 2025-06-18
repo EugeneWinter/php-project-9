@@ -2,24 +2,22 @@ FROM php:8.3-cli
 
 # Установка зависимостей
 RUN apt-get update && apt-get install -y \
-    git \
-    libpq-dev \
-    unzip \
+    git unzip zip libpq-dev \
     && docker-php-ext-install pdo pdo_pgsql \
     && rm -rf /var/lib/apt/lists/*
 
-# Настройка Git и Composer
-RUN git config --global --add safe.directory /app && \
-    curl -sS https://getcomposer.org/installer | php -- \
-    --install-dir=/usr/local/bin --filename=composer
-
 WORKDIR /app
 
-COPY . .
+# Установка Composer
+RUN curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
 
-# Установка зависимостей с очисткой кеша
-RUN composer clear-cache && \
-    composer install --ignore-platform-reqs --no-scripts && \
-    composer dump-autoload --optimize
+# Копируем зависимости
+COPY composer.json composer.lock ./
+
+# Установка пакетов
+RUN composer install --no-interaction --prefer-dist --ignore-platform-reqs
+
+# Копируем весь проект
+COPY . .
 
 CMD ["make", "start"]
