@@ -9,6 +9,7 @@ services:
       - .:/project
     environment:
       - PORT=8080
+      - DATABASE_URL=pgsql://postgres:1337@db:5432/url_checker
     depends_on:
       - db
 

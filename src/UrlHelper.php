@@ -1,20 +1,29 @@
-    <?php
+<?php
 
-    function normalizeUrl(string $url): string
-    {
-        $parsedUrl = parse_url(trim($url));
+declare(strict_types=1);
 
-        if (!isset($parsedUrl['scheme'])) {
-            $url = "https://{$url}";
-            $parsedUrl = parse_url($url);
-        }
+/**
+ * Функция для нормализации URL
+ * 
+ * @param string $url Исходный URL
+ * @return string Нормализованный URL
+ * @throws InvalidArgumentException
+ */
+function normalizeUrl(string $url): string
+{
+    $parsedUrl = parse_url(trim($url));
 
-        $scheme = strtolower($parsedUrl['scheme']);
-        $host = strtolower($parsedUrl['host'] ?? $parsedUrl['path'] ?? '');
-
-        if (empty($host)) {
-            throw new InvalidArgumentException('Некорректный URL');
-        }
-
-        return "{$scheme}://{$host}";
+    if (!isset($parsedUrl['scheme'])) {
+        $url = "https://{$url}";
+        $parsedUrl = parse_url($url);
     }
+
+    $scheme = strtolower($parsedUrl['scheme']);
+    $host = strtolower($parsedUrl['host'] ?? $parsedUrl['path'] ?? '');
+
+    if (empty($host)) {
+        throw new InvalidArgumentException('Некорректный URL');
+    }
+
+    return "{$scheme}://{$host}";
+}

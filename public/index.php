@@ -1,9 +1,14 @@
 <?php
+declare(strict_types=1);
 
-// Важно: НИКАКИХ пробелов или символов перед <?php
-
-// Инициализация сессии в самом начале
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path' => '/',
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     session_start();
 }
 
@@ -30,9 +35,12 @@ try {
     $pdo = new PDO(
         "pgsql:host=db;port=5432;dbname=url_checker",
         "postgres",
-        "1337"
+        "1337",
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_PERSISTENT => true
+        ]
     );
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
@@ -43,7 +51,6 @@ $app = AppFactory::create();
 $app->setBasePath('');
 $app->add(new BasePathMiddleware($app));
 
-// Добавляем middleware для сессий перед определением flash
 $app->add(function ($request, $handler) {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
