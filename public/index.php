@@ -33,17 +33,28 @@ require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../src/UrlHelper.php';
 
 try {
+    $dsn = sprintf(
+        'pgsql:host=%s;port=%d;dbname=%s',
+        getenv('DB_HOST') ?: 'db',
+        getenv('DB_PORT') ?: 5432,
+        getenv('DB_NAME') ?: 'url_checker'
+    );
+    
     $pdo = new PDO(
-        "pgsql:host=db;port=5432;dbname=url_checker",
-        "postgres",
-        "1337",
+        $dsn,
+        getenv('DB_USER') ?: 'postgres',
+        getenv('DB_PASSWORD') ?: '1337',
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_PERSISTENT => false
+            PDO::ATTR_PERSISTENT => false,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
+    $pdo->query('SELECT 1')->fetch();
 } catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    error_log('Database connection error: ' . $e->getMessage());
+    die("Database connection failed. Please try again later.");
 }
 
 $container = new Container();
@@ -72,7 +83,20 @@ $container->set('db', function () use ($pdo) {
     return $pdo;
 });
 
-$app->addErrorMiddleware(true, true, true);
+$errorMiddleware = $app->addErrorMiddleware(true, true, true);
+$errorMiddleware->setDefaultErrorHandler(function (
+    Request $request,
+    Throwable $exception,
+    bool $displayErrorDetails,
+    bool $logErrors,
+    bool $logErrorDetails
+) use ($app) {
+    $payload = ['error' => $exception->getMessage()];
+    $response = $app->getResponseFactory()->createResponse();
+    $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE));
+    return $response->withStatus(500)
+                   ->withHeader('Content-Type', 'application/json');
+});
 
 $app->get('/favicon.ico', function (Request $request, Response $response) {
     return $response->withStatus(204);
