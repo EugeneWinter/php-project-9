@@ -1,13 +1,10 @@
-DROP TABLE IF EXISTS url_checks;
-DROP TABLE IF EXISTS urls;
-
-CREATE TABLE urls (
+DROP TABLE IF EXISTS urls (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE url_checks (
+DROP TABLE IF EXISTS url_checks (
     id BIGSERIAL PRIMARY KEY,
     url_id BIGINT REFERENCES urls(id),
     status_code INT,
