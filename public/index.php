@@ -42,8 +42,8 @@ try {
 
     $pdo = new PDO(
         $dsn,
-        'postgres',
-        '1337',
+        getenv('DB_USER') ?: 'postgres',
+        getenv('DB_PASSWORD') ?: '1337',
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_PERSISTENT => false,
@@ -51,6 +51,7 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
+    
     $pdo->query('SELECT 1')->fetch();
 } catch (PDOException $e) {
     error_log('Database connection error: ' . $e->getMessage());
