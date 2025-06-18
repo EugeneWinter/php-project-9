@@ -42,8 +42,8 @@ try {
 
     $pdo = new PDO(
         $dsn,
-        getenv('DB_USER') ?: 'postgres',
-        getenv('DB_PASSWORD') ?: '1337',
+        'postgres',
+        '1337',
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_PERSISTENT => false,
