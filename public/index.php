@@ -39,6 +39,7 @@ $dotenv->required('DATABASE_URL');
 
 try {
     $databaseUrl = $_ENV['DATABASE_URL'];
+    
     if (strpos($databaseUrl, 'postgres://') === 0) {
         $databaseUrl = str_replace('postgres://', 'pgsql://', $databaseUrl);
     }
@@ -126,7 +127,7 @@ $app->post('/urls', function (Request $request, Response $response) {
         $flash->addMessage('error', $errors['url'][0]);
         $flash->addMessage('url', $url);
         return $response
-            ->withHeader('Location', '/urls')
+            ->withHeader('Location', '/')
             ->withStatus(422);
     }
 
