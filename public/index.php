@@ -119,7 +119,7 @@ $app->post('/urls', function (Request $request, Response $response) {
         $flash->addMessage('error', $errors['url'][0]);
         $flash->addMessage('url', $url);
         return $response
-            ->withHeader('Location', '/')
+            ->withHeader('Location', '/urls')
             ->withStatus(422);
     }
 

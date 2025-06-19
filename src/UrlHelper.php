@@ -11,19 +11,21 @@ declare(strict_types=1);
  */
 function normalizeUrl(string $url): string
 {
-    $parsedUrl = parse_url(trim($url));
-
-    if (!isset($parsedUrl['scheme'])) {
+    $url = trim($url);
+    if (!preg_match('/^https?:\/\//i', $url)) {
         $url = "https://{$url}";
-        $parsedUrl = parse_url($url);
     }
 
-    $scheme = strtolower($parsedUrl['scheme']);
-    $host = strtolower($parsedUrl['host'] ?? $parsedUrl['path'] ?? '');
-
-    if (empty($host)) {
+    $parsedUrl = parse_url($url);
+    if ($parsedUrl === false || !isset($parsedUrl['scheme'], $parsedUrl['host'])) {
         throw new InvalidArgumentException('Некорректный URL');
     }
 
+    $scheme = strtolower($parsedUrl['scheme']);
+    if (!in_array($scheme, ['http', 'https'])) {
+        throw new InvalidArgumentException('Некорректный URL');
+    }
+
+    $host = strtolower($parsedUrl['host']);
     return "{$scheme}://{$host}";
 }
