@@ -114,8 +114,9 @@ $app->post('/urls', function (Request $request, Response $response) {
     if (!$v->validate()) {
         $errors = $v->errors();
         $flash->addMessage('error', $errors['url'][0]);
+        $flash->addMessage('url', $url);
         return $response
-            ->withHeader('Location', '/urls')
+            ->withHeader('Location', '/')
             ->withStatus(422);
     }
 
