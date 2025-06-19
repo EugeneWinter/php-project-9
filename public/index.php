@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -105,10 +106,12 @@ $app->get('/', function (Request $request, Response $response) {
 $app->post('/urls', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
     $url = $data['url']['name'] ?? '';
+
     $v = new Validator(['url' => $url]);
     $v->rule('required', 'url')->message('URL не должен быть пустым');
     $v->rule('url', 'url')->message('Некорректный URL');
     $v->rule('lengthMax', 'url', 255)->message('URL превышает 255 символов');
+
     $flash = $this->get('flash');
 
     if (!$v->validate()) {
@@ -116,7 +119,7 @@ $app->post('/urls', function (Request $request, Response $response) {
         $flash->addMessage('error', $errors['url'][0]);
         $flash->addMessage('url', $url);
         return $response
-            ->withHeader('Location', '/urls')
+            ->withHeader('Location', '/')
             ->withStatus(422);
     }
 
