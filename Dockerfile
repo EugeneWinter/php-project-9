@@ -2,7 +2,6 @@ FROM php:8.3-cli
 
 WORKDIR /app
 
-# Установка зависимостей и очистка кеша в одном RUN слое
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -12,22 +11,16 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка Composer (официальный метод)
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
-# Копируем только файлы, необходимые для установки зависимостей
 COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --ignore-platform-reqs
 
-# Установка пакетов без dev-зависимостей (для production)
-RUN composer install --no-dev --no-interaction --prefer-dist --ignore-platform-reqs --no-scripts
-
-# Копируем остальные файлы проекта
 COPY . .
 
-# Установка прав (если нужно)
-RUN chown -R www-data:www-data /app
+RUN chmod +x init-db.sh
 
-# Явное указание порта через переменную окружения
-ENV PORT=8002
+ENV PORT=8080
+EXPOSE 8080
 
 CMD ["make", "start"]
