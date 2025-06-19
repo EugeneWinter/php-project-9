@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -95,11 +94,8 @@ $app->get('/favicon.ico', function (Request $request, Response $response) {
 });
 
 $app->get('/', function (Request $request, Response $response) {
-    $flash = $this->get('flash')->getMessages();
     return $this->get('view')->render($response, 'index.phtml', [
-        'pageTitle' => 'Анализатор страниц',
-        'error' => $flash['error'][0] ?? null,
-        'url' => $flash['url'][0] ?? null
+        'pageTitle' => 'Анализатор страниц'
     ]);
 })->setName('home');
 
@@ -117,15 +113,15 @@ $app->post('/urls', function (Request $request, Response $response) {
     if (!$v->validate()) {
         $errors = $v->errors();
         $flash->addMessage('error', $errors['url'][0]);
-        $flash->addMessage('url', $url);
         return $response
-            ->withHeader('Location', '/')
+            ->withHeader('Location', '/urls')
             ->withStatus(422);
     }
 
     try {
         $normalizedUrl = normalizeUrl($url);
         $db = $this->get('db');
+
         $stmt = $db->prepare('SELECT id FROM urls WHERE name = ?');
         $stmt->execute([$normalizedUrl]);
         $existingUrl = $stmt->fetch();
@@ -143,7 +139,7 @@ $app->post('/urls', function (Request $request, Response $response) {
         return $response->withHeader('Location', "/urls/{$id}")->withStatus(302);
     } catch (PDOException $e) {
         $flash->addMessage('error', 'Ошибка при сохранении URL: ' . $e->getMessage());
-        return $response->withHeader('Location', '/')->withStatus(302);
+        return $response->withHeader('Location', '/urls')->withStatus(302);
     }
 })->setName('urls.store');
 
@@ -167,8 +163,7 @@ $app->get('/urls', function (Request $request, Response $response) {
 
     return $this->get('view')->render($response, 'urls/index.phtml', [
         'urls' => $urls,
-        'error' => $flash['error'][0] ?? null,
-        'url' => $flash['url'][0] ?? null
+        'error' => $flash['error'][0] ?? null
     ]);
 })->setName('urls.index');
 
@@ -248,7 +243,7 @@ $app->post('/urls/{id}/checks', function (Request $request, Response $response, 
         return $response->withHeader('Location', "/urls/{$urlId}")->withStatus(302);
     } catch (PDOException $e) {
         $flash->addMessage('error', 'Ошибка базы данных: ' . $e->getMessage());
-        return $response->withHeader('Location', '/')->withStatus(302);
+        return $response->withHeader('Location', '/urls')->withStatus(302);
     }
 })->setName('urls.checks');
 
