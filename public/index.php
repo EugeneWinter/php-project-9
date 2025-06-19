@@ -28,22 +28,29 @@ use DiDom\Document;
 use Slim\Flash\Messages;
 use Selective\BasePath\BasePathMiddleware;
 use Illuminate\Support\Str;
+use Dotenv\Dotenv;
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../src/UrlHelper.php';
 
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->safeLoad();
+$dotenv->required('DATABASE_URL');
+
 try {
+    $dbUrl = parse_url($_ENV['DATABASE_URL']);
+
     $dsn = sprintf(
         'pgsql:host=%s;port=%d;dbname=%s',
-        getenv('DB_HOST') ?: 'db',
-        getenv('DB_PORT') ?: 5432,
-        getenv('DB_NAME') ?: 'url_checker'
+        $dbUrl['host'],
+        $dbUrl['port'] ?? 5432,
+        ltrim($dbUrl['path'], '/')
     );
 
     $pdo = new PDO(
         $dsn,
-        getenv('DB_USER') ?: 'postgres',
-        getenv('DB_PASSWORD') ?: '1337',
+        $dbUrl['user'],
+        $dbUrl['pass'],
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_PERSISTENT => false,
@@ -55,7 +62,7 @@ try {
     $pdo->query('SELECT 1')->fetch();
 } catch (PDOException $e) {
     error_log('Database connection error: ' . $e->getMessage());
-    die("Database connection failed. Please try again later.");
+    die("Database connection failed. Please check your DATABASE_URL in .env file and try again.");
 }
 
 $container = new Container();
@@ -145,12 +152,12 @@ $app->post('/urls', function (Request $request, Response $response) {
 $app->get('/urls', function (Request $request, Response $response) {
     $db = $this->get('db');
     $stmt = $db->query('
-        SELECT u.id, u.name, 
+        SELECT u.id, u.name,
                MAX(uc.created_at) as last_check_date,
-               (SELECT uc2.status_code 
-                FROM url_checks uc2 
-                WHERE uc2.url_id = u.id 
-                ORDER BY uc2.created_at DESC 
+               (SELECT uc2.status_code
+                FROM url_checks uc2
+                WHERE uc2.url_id = u.id
+                ORDER BY uc2.created_at DESC
                 LIMIT 1) as status_code
         FROM urls u
         LEFT JOIN url_checks uc ON u.id = uc.url_id
@@ -230,8 +237,8 @@ $app->post('/urls/{id}/checks', function (Request $request, Response $response, 
                 : '';
 
             $stmt = $db->prepare('
-                INSERT INTO url_checks 
-                (url_id, status_code, h1, title, description, created_at) 
+                INSERT INTO url_checks
+                (url_id, status_code, h1, title, description, created_at)
                 VALUES (?, ?, ?, ?, ?, ?)
             ');
             $stmt->execute([
