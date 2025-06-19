@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -39,14 +38,12 @@ $dotenv->required('DATABASE_URL');
 
 try {
     $dbUrl = parse_url($_ENV['DATABASE_URL']);
-
     $dsn = sprintf(
         'pgsql:host=%s;port=%d;dbname=%s',
         $dbUrl['host'],
         $dbUrl['port'] ?? 5432,
         ltrim($dbUrl['path'], '/')
     );
-
     $pdo = new PDO(
         $dsn,
         $dbUrl['user'],
@@ -58,7 +55,6 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
-
     $pdo->query('SELECT 1')->fetch();
 } catch (PDOException $e) {
     error_log('Database connection error: ' . $e->getMessage());
@@ -109,25 +105,24 @@ $app->get('/', function (Request $request, Response $response) {
 $app->post('/urls', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
     $url = $data['url']['name'] ?? '';
-
     $v = new Validator(['url' => $url]);
     $v->rule('required', 'url')->message('URL не должен быть пустым');
     $v->rule('url', 'url')->message('Некорректный URL');
     $v->rule('lengthMax', 'url', 255)->message('URL превышает 255 символов');
-
     $flash = $this->get('flash');
 
     if (!$v->validate()) {
         $errors = $v->errors();
         $flash->addMessage('error', $errors['url'][0]);
         $flash->addMessage('url', $url);
-        return $response->withHeader('Location', '/')->withStatus(302);
+        return $response
+            ->withHeader('Location', '/urls')
+            ->withStatus(422);
     }
 
     try {
         $normalizedUrl = normalizeUrl($url);
         $db = $this->get('db');
-
         $stmt = $db->prepare('SELECT id FROM urls WHERE name = ?');
         $stmt->execute([$normalizedUrl]);
         $existingUrl = $stmt->fetch();
@@ -165,31 +160,29 @@ $app->get('/urls', function (Request $request, Response $response) {
         ORDER BY u.id DESC
     ');
     $urls = new Collection($stmt->fetchAll());
+    $flash = $this->get('flash')->getMessages();
 
     return $this->get('view')->render($response, 'urls/index.phtml', [
-        'urls' => $urls
+        'urls' => $urls,
+        'error' => $flash['error'][0] ?? null,
+        'url' => $flash['url'][0] ?? null
     ]);
 })->setName('urls.index');
 
 $app->get('/urls/{id}', function (Request $request, Response $response, $args) {
     $id = $args['id'];
     $db = $this->get('db');
-
     try {
         $stmt = $db->prepare('SELECT * FROM urls WHERE id = ?');
         $stmt->execute([$id]);
         $url = $stmt->fetch();
-
         if (!$url) {
             return $response->withStatus(404);
         }
-
         $stmt = $db->prepare('SELECT * FROM url_checks WHERE url_id = ? ORDER BY id DESC');
         $stmt->execute([$id]);
         $checks = new Collection($stmt->fetchAll());
-
         $flash = $this->get('flash')->getMessages();
-
         return $this->get('view')->render($response, 'urls/show.phtml', [
             'url' => $url,
             'checks' => $checks,
@@ -207,35 +200,29 @@ $app->post('/urls/{id}/checks', function (Request $request, Response $response, 
     $urlId = $args['id'];
     $db = $this->get('db');
     $flash = $this->get('flash');
-
     try {
         $stmt = $db->prepare('SELECT * FROM urls WHERE id = ?');
         $stmt->execute([$urlId]);
         $url = $stmt->fetch();
-
         if (!$url) {
             return $response->withStatus(404);
         }
-
         $client = new Client([
             'timeout' => 5,
             'allow_redirects' => true,
             'http_errors' => false,
             'verify' => false
         ]);
-
         try {
             $res = $client->request('GET', $url['name']);
             $statusCode = $res->getStatusCode();
             $body = (string)$res->getBody();
-
             $document = new Document($body);
             $h1 = $document->first('h1') ? Str::limit($document->first('h1')->text(), 252, '...') : '';
             $title = $document->first('title') ? Str::limit($document->first('title')->text(), 252, '...') : '';
             $description = $document->first('meta[name=description]')
                 ? Str::limit($document->first('meta[name=description]')->getAttribute('content'), 252, '...')
                 : '';
-
             $stmt = $db->prepare('
                 INSERT INTO url_checks
                 (url_id, status_code, h1, title, description, created_at)
@@ -249,14 +236,12 @@ $app->post('/urls/{id}/checks', function (Request $request, Response $response, 
                 $description,
                 Carbon::now()
             ]);
-
             $flash->addMessage('success', 'Страница успешно проверена');
         } catch (ConnectException $e) {
             $flash->addMessage('error', 'Не удалось подключиться к сайту: ' . $e->getMessage());
         } catch (RequestException $e) {
             $flash->addMessage('warning', 'Ошибка при выполнении запроса: ' . $e->getMessage());
         }
-
         return $response->withHeader('Location', "/urls/{$urlId}")->withStatus(302);
     } catch (PDOException $e) {
         $flash->addMessage('error', 'Ошибка базы данных: ' . $e->getMessage());
