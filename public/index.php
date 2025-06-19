@@ -95,8 +95,11 @@ $app->get('/favicon.ico', function (Request $request, Response $response) {
 });
 
 $app->get('/', function (Request $request, Response $response) {
+    $flash = $this->get('flash')->getMessages();
     return $this->get('view')->render($response, 'index.phtml', [
-        'pageTitle' => 'Анализатор страниц'
+        'pageTitle' => 'Анализатор страниц',
+        'error' => $flash['error'][0] ?? null,
+        'url' => $flash['url'][0] ?? null
     ]);
 })->setName('home');
 
