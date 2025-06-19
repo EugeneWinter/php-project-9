@@ -38,17 +38,24 @@ $dotenv->safeLoad();
 $dotenv->required('DATABASE_URL');
 
 try {
-    $dbUrl = parse_url($_ENV['DATABASE_URL']);
+    $databaseUrl = $_ENV['DATABASE_URL'];
+    if (strpos($databaseUrl, 'postgres://') === 0) {
+        $databaseUrl = str_replace('postgres://', 'pgsql://', $databaseUrl);
+    }
+    
+    $dbParams = parse_url($databaseUrl);
+    
     $dsn = sprintf(
         'pgsql:host=%s;port=%d;dbname=%s',
-        $dbUrl['host'],
-        $dbUrl['port'] ?? 5432,
-        ltrim($dbUrl['path'], '/')
+        $dbParams['host'] ?? 'localhost',
+        $dbParams['port'] ?? 5432,
+        ltrim($dbParams['path'] ?? '', '/')
     );
+    
     $pdo = new PDO(
         $dsn,
-        $dbUrl['user'],
-        $dbUrl['pass'],
+        $dbParams['user'] ?? '',
+        $dbParams['pass'] ?? '',
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_PERSISTENT => false,
@@ -119,7 +126,7 @@ $app->post('/urls', function (Request $request, Response $response) {
         $flash->addMessage('error', $errors['url'][0]);
         $flash->addMessage('url', $url);
         return $response
-            ->withHeader('Location', '/')  // Тест ожидает редирект на '/'
+            ->withHeader('Location', '/urls')
             ->withStatus(422);
     }
 
