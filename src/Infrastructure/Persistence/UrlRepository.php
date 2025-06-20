@@ -35,19 +35,22 @@ class UrlRepository
 
     public function save(Url $url): Url
     {
-        $stmt = $this->pdo->prepare("
-            INSERT INTO urls (name, created_at) 
-            VALUES (:name, NOW())
-            RETURNING id, created_at
-        ");
-        $stmt->execute(['name' => $url->getName()]);
+        $existingUrl = $this->findByName($url->getName());
+        if ($existingUrl !== null) {
+            return $existingUrl;
+        }
 
-        $data = $stmt->fetch();
-        return $this->mapToEntity([
-            'id' => $data['id'],
-            'name' => $url->getName(),
-            'created_at' => $data['created_at']
-        ]);
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO urls (name, created_at) VALUES (?, ?) RETURNING id"
+        );
+
+        $createdAt = $url->getCreatedAt() ?: date('Y-m-d H:i:s');
+        $stmt->execute([$url->getName(), $createdAt]);
+        
+        $id = (int)$stmt->fetchColumn();
+        $url->setId($id);
+        
+        return $url;
     }
 
     private function mapToEntity(array $data): Url

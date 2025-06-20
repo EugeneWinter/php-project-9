@@ -35,7 +35,8 @@ $container->set(PDO::class, function () {
 });
 
 $container->set('renderer', function () {
-    return new PhpRenderer(__DIR__ . '/../templates');
+    $renderer = new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
+    return $renderer;
 });
 
 $container->set(\App\Infrastructure\Persistence\UrlRepository::class, function ($c) {

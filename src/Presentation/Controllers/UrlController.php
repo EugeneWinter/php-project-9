@@ -35,6 +35,14 @@ class UrlController
             return $response->withStatus(404);
         }
 
+        $templatePath = $this->renderer->getTemplatePath() . 'urls/show.phtml';
+        error_log("Template path: " . $templatePath);
+        if (!file_exists($templatePath)) {
+            error_log("Template does NOT exist at: " . $templatePath);
+        } else {
+            error_log("Template exists at: " . $templatePath);
+        }
+
         return $this->renderer->render($response, 'urls/show.phtml', ['url' => $url]);
     }
 }

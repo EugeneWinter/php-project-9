@@ -9,8 +9,9 @@ class Url
     public function __construct(
         private int $id,
         private string $name,
-        private string $createdAt
+        private ?string $createdAt = null
     ) {
+        $this->createdAt = $createdAt ?? date('Y-m-d H:i:s');
     }
 
     public function getId(): int
@@ -26,5 +27,10 @@ class Url
     public function getCreatedAt(): string
     {
         return $this->createdAt;
+    }
+    
+    public function setId(int $id): void
+    {
+        $this->id = $id;
     }
 }
