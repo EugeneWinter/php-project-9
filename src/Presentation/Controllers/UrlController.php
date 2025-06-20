@@ -8,6 +8,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use App\Domain\Models\Url;
 use App\Infrastructure\Persistence\UrlRepository;
+use RuntimeException;
 
 class UrlController
 {
@@ -35,14 +36,12 @@ class UrlController
             return $response->withStatus(404);
         }
 
-        $templatePath = $this->renderer->getTemplatePath() . 'urls/show.phtml';
-        error_log("Template path: " . $templatePath);
-        if (!file_exists($templatePath)) {
-            error_log("Template does NOT exist at: " . $templatePath);
-        } else {
-            error_log("Template exists at: " . $templatePath);
+        try {
+            return $this->renderer->render($response, 'urls/show.phtml', ['url' => $url]);
+        } catch (\Exception $e) {
+            error_log("Rendering error. Base path: " . $this->renderer->getTemplatePath());
+            error_log("Template contents: " . file_get_contents('/app/templates/urls/show.phtml'));
+            throw new RuntimeException("Rendering failed: " . $e->getMessage());
         }
-
-        return $this->renderer->render($response, 'urls/show.phtml', ['url' => $url]);
     }
 }

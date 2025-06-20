@@ -35,8 +35,22 @@ $container->set(PDO::class, function () {
 });
 
 $container->set('renderer', function () {
-    $renderer = new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
-    return $renderer;
+    $templatePath = '/app/templates';
+
+    $requiredTemplates = [
+        '/index.phtml',
+        '/urls/show.phtml',
+        '/urls/index.phtml'
+    ];
+
+    foreach ($requiredTemplates as $template) {
+        if (!file_exists($templatePath . $template)) {
+            throw new RuntimeException("Template file missing: " . $templatePath . $template);
+        }
+    }
+
+    error_log("Renderer initialized with templates at: " . $templatePath);
+    return new \Slim\Views\PhpRenderer($templatePath);
 });
 
 $container->set(\App\Infrastructure\Persistence\UrlRepository::class, function ($c) {
