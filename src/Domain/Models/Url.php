@@ -28,7 +28,7 @@ class Url
     {
         return $this->createdAt;
     }
-    
+
     public function setId(int $id): void
     {
         $this->id = $id;

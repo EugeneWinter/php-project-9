@@ -47,14 +47,14 @@ class UrlCheckRepository
                     FROM url_checks
                     GROUP BY url_id
                 ) latest ON uc.url_id = latest.url_id AND uc.created_at = latest.max_date";
-        
+
         $stmt = $this->pdo->query($sql);
         $results = [];
-        
+
         foreach ($stmt->fetchAll() as $row) {
             $results[$row['url_id']] = $row;
         }
-        
+
         return $results;
     }
 

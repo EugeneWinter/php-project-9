@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use Slim\Routing\RouteCollectorProxy;
@@ -11,10 +12,10 @@ $app->group('/urls', function (RouteCollectorProxy $group) {
     $group->get('', function ($request, $response) {
         $urls = $this->get(\App\Infrastructure\Persistence\UrlRepository::class)->findAll();
         $lastChecks = $this->get(\App\Infrastructure\Persistence\UrlCheckRepository::class)->getLastChecks();
-        
+
         return $this->get('renderer')->render(
-            $response, 
-            'urls/index.phtml', 
+            $response,
+            'urls/index.phtml',
             [
                 'urls' => $urls,
                 'lastChecks' => $lastChecks

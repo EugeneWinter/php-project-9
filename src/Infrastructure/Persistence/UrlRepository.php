@@ -46,10 +46,10 @@ class UrlRepository
 
         $createdAt = $url->getCreatedAt() ?: date('Y-m-d H:i:s');
         $stmt->execute([$url->getName(), $createdAt]);
-        
+
         $id = (int)$stmt->fetchColumn();
         $url->setId($id);
-        
+
         return $url;
     }
 
