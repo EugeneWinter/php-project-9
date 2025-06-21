@@ -1,67 +1,228 @@
 <?php
 
-declare(strict_types=1);
-
 require __DIR__ . '/../vendor/autoload.php';
 
+use App\Url;
+use App\UrlCheckRepository;
+use App\UrlValidator;
+use App\UrlRepository;
 use DI\Container;
+use DiDom\Document;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
+use Slim\Exception\HttpNotFoundException;
 use Slim\Factory\AppFactory;
-use Slim\Middleware\MethodOverrideMiddleware;
+use Slim\Flash\Messages;
+use Slim\Routing\RouteContext;
 use Slim\Views\PhpRenderer;
+use Psr\Container\ContainerInterface;
+use Dotenv\Dotenv;
+
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->load();
+$dotenv->required('DATABASE_URL')->notEmpty();
 
 session_start();
 
 $container = new Container();
-AppFactory::setContainer($container);
 
 $container->set(PDO::class, function () {
-    $dsn = sprintf(
-        'pgsql:host=%s;port=%s;dbname=%s',
-        getenv('DB_HOST') ?: 'db',
-        getenv('DB_PORT') ?: '5432',
-        getenv('DB_NAME') ?: 'url_checker'
-    );
+    $databaseUrl = parse_url($_ENV['DATABASE_URL']);
+    
+    $host = $databaseUrl['host'] ?? 'localhost';
+    $port = $databaseUrl['port'] ?? 5432;
+    $dbName = ltrim($databaseUrl['path'] ?? '', '/');
+    $user = $databaseUrl['user'] ?? '';
+    $pass = $databaseUrl['pass'] ?? '';
 
-    return new PDO(
-        $dsn,
-        getenv('DB_USER') ?: 'postgres',
-        getenv('DB_PASSWORD') ?: '1337',
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_PERSISTENT => false
-        ]
-    );
+    $dsn = "pgsql:host={$host};port={$port};dbname={$dbName}";
+    
+    $connection = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+        PDO::ATTR_STRINGIFY_FETCHES => false
+    ]);
+    
+    return $connection;
 });
 
-$container->set('renderer', function () {
-    $templatePath = '/app/templates';
+$container->set('flash', function () {
+    return new Messages();
+});
 
-    $requiredTemplates = [
-        '/index.phtml',
-        '/urls/show.phtml',
-        '/urls/index.phtml'
+$container->set(UrlRepository::class, function (ContainerInterface $c) {
+    return new UrlRepository($c->get(PDO::class));
+});
+
+$container->set(UrlCheckRepository::class, function (ContainerInterface $c) {
+    return new UrlCheckRepository($c->get(PDO::class));
+});
+
+$container->set(UrlValidator::class, function () {
+    return new UrlValidator();
+});
+
+$app = AppFactory::createFromContainer($container);
+
+$container->set('router', fn() => $app->getRouteCollector()->getRouteParser());
+
+$container->set('renderer', function ($container) {
+    $renderer = new PhpRenderer(__DIR__ . '/../templates', ['router' => $container->get('router')]);
+    $renderer->setLayout('layouts/layout.php');
+
+    $renderer->addAttribute('getCurrentRoute', function ($request) {
+        $routeContext = RouteContext::fromRequest($request);
+        $route = $routeContext->getRoute();
+        return $route ? $route->getName() : '';
+    });
+    return $renderer;
+});
+
+$errorMiddleware = $app->addErrorMiddleware(true, true, true);
+$errorMiddleware->setErrorHandler(
+    HttpNotFoundException::class,
+    function ($request, $exception, $displayErrorDetails) {
+        $response = new \Slim\Psr7\Response();
+        return $this->get('renderer')->render($response->withStatus(404), "404.phtml");
+    }
+);
+
+$app->get('/', function ($request, $response) {
+    $params = [
+        'currentRoute' => $this->get('renderer')->getAttribute('getCurrentRoute')($request),
+        'url' => ['name' => ''],
     ];
 
-    foreach ($requiredTemplates as $template) {
-        if (!file_exists($templatePath . $template)) {
-            throw new RuntimeException("Template file missing: " . $templatePath . $template);
-        }
+    return $this->get('renderer')->render($response, 'index.phtml', $params);
+})->setName('/');
+
+$app->get('/urls', function ($request, $response) {
+    $urls = $this->get(UrlRepository::class)->getEntities();
+    $lastChecks = $this->get(UrlCheckRepository::class)->getAllLastChecks();
+
+    $lastChecksIndexed = [];
+    foreach ($lastChecks as $check) {
+        $lastChecksIndexed[$check->getUrlId()] = [
+            'status_code' => $check->getStatusCode(),
+            'created_at' => $check->getCheckDate()
+        ];
     }
 
-    error_log("Renderer initialized with templates at: " . $templatePath);
-    return new \Slim\Views\PhpRenderer($templatePath);
-});
+    $params = [
+        'urls' => $urls,
+        'lastChecks' => $lastChecksIndexed,
+        'currentRoute' => $this->get('renderer')->getAttribute('getCurrentRoute')($request),
+    ];
+    return $this->get('renderer')->render($response, 'urls/index.phtml', $params);
+})->setName('urls.index');
 
-$container->set(\App\Infrastructure\Persistence\UrlRepository::class, function ($c) {
-    return new \App\Infrastructure\Persistence\UrlRepository($c->get(PDO::class));
-});
+$app->get('/urls/{id:[0-9]+}', function ($request, $response, $args) {
+    $messages = $this->get('flash')->getMessages();
+    $id = $args['id'];
 
-$app = AppFactory::create();
+    $url = $this->get(UrlRepository::class)->find($id);
 
-$app->add(new MethodOverrideMiddleware());
-$app->addErrorMiddleware(true, true, true);
+    if (is_null($url)) {
+        return $this->get('renderer')->render($response->withStatus(404), "404.phtml");
+    }
 
-require __DIR__ . '/../src/Infrastructure/App/routes.php';
+    $params = [
+        'flash' => $messages,
+        'url' => $url,
+        'checkData' => $this->get(UrlCheckRepository::class)->getChecks($args['id']),
+    ];
+
+    return $this->get('renderer')->render($response, 'urls/show.phtml', $params);
+})->setName('urls.show');
+
+$app->post('/urls', function ($request, $response) {
+    $urlData = $request->getParsedBodyParam('url');
+    $urlString = $urlData['name'] ?? '';
+
+    if (!str_starts_with($urlString, 'http')) {
+        $urlString = 'https://' . $urlString;
+    }
+
+    $validator = $this->get(UrlValidator::class);
+    $errors = $validator->validate(['name' => $urlString]);
+
+    if (count($errors) > 0) {
+        $params = [
+            'errors' => $errors,
+            'url' => ['name' => $urlData['name'] ?? '']
+        ];
+
+        return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
+    }
+
+    $parsedUrl = parse_url($urlString);
+    if (!isset($parsedUrl['scheme'], $parsedUrl['host'])) {
+        $errors['name'] = ['Некорректный URL'];
+        $params = [
+            'errors' => $errors,
+            'url' => $urlData
+        ];
+        return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
+    }
+
+    $normalizedUrl = mb_strtolower("{$parsedUrl['scheme']}://{$parsedUrl['host']}");
+    $url = $this->get(UrlRepository::class)->findByName($normalizedUrl);
+
+    if (!is_null($url)) {
+        $this->get('flash')->addMessage('success', 'Страница уже существует');
+        $id = $url->getId();
+        return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $id]));
+    }
+
+    $url = new Url($normalizedUrl);
+    $this->get(UrlRepository::class)->save($url);
+    $id = $url->getId();
+    $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
+
+    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $id]));
+})->setName('urls.store');
+
+$app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args) {
+    $urlId = $args['url_id'];
+    $url = $this->get(UrlRepository::class)->find($urlId);
+    
+    if (!$url) {
+        return $this->get('renderer')->render($response->withStatus(404), "404.phtml");
+    }
+
+    $client = new Client([
+        'timeout' => 5,
+        'connect_timeout' => 3,
+        'headers' => [
+            'User-Agent' => 'Mozilla/5.0 (compatible; PageAnalyzerBot/1.0)'
+        ]
+    ]);
+
+    try {
+        $responseResult = $client->get($url->getName());
+        $statusCode = $responseResult->getStatusCode();
+        $body = $responseResult->getBody()->getContents();
+        $document = new Document($body);
+        
+        $h1 = $document->first('h1') ? $document->first('h1')->text() : null;
+        $title = $document->first('title') ? $document->first('title')->text() : null;
+        
+        $description = null;
+        $descriptionTag = $document->first('meta[name=description]');
+        if ($descriptionTag) {
+            $description = $descriptionTag->getAttribute('content');
+        }
+        
+        $this->get(UrlCheckRepository::class)->addCheck($urlId, $statusCode, $h1, $title, $description);
+        $this->get('flash')->addMessage('success', 'Страница успешно проверена');
+    } catch (RequestException | ConnectException $e) {
+        $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке, не удалось подключиться');
+        error_log('Check error: ' . $e->getMessage());
+    }
+
+    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
+})->setName('urls.check');
 
 $app->run();
