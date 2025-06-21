@@ -210,18 +210,19 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
             $body = mb_convert_encoding($body, 'UTF-8', $charset);
         }
 
-        $document = new Document($body);
+        $document = new Document();
+        $document->loadHtml($body);
 
         $h1 = null;
         $h1Element = $document->first('h1');
         if ($h1Element) {
-            $h1 = trim($h1Element->text());
+            $h1 = trim($h1Element->text);
         }
 
         $title = null;
         $titleElement = $document->first('title');
         if ($titleElement) {
-            $title = trim($titleElement->text());
+            $title = trim($titleElement->text);
         }
 
         $description = null;
