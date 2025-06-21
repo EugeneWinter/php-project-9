@@ -156,7 +156,6 @@ $app->post('/urls', function ($request, $response) {
             'errors' => $errors,
             'url' => ['name' => $urlData['name'] ?? '']
         ];
-
         return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
     }
 

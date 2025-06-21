@@ -55,10 +55,14 @@
 
     <main class="flex-grow-1">
         <?php if (!empty($flash['success'])) : ?>
-            <div class="alert alert-success" data-test="flash"><?= htmlspecialchars($flash['success'][0]) ?></div>
+            <div class="container-lg mt-3">
+                <div class="alert alert-success" data-test="flash"><?= htmlspecialchars($flash['success'][0]) ?></div>
+            </div>
         <?php endif; ?>
         <?php if (!empty($flash['error'])) : ?>
-            <div class="alert alert-danger" data-test="flash"><?= htmlspecialchars($flash['error'][0]) ?></div>
+            <div class="container-lg mt-3">
+                <div class="alert alert-danger" data-test="flash"><?= htmlspecialchars($flash['error'][0]) ?></div>
+            </div>
         <?php endif; ?>
         <?= $content ?>
     </main>
