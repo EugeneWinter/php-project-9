@@ -206,14 +206,13 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $statusCode = $responseResult->getStatusCode();
         $body = $responseResult->getBody()->getContents();
 
-        $document = new Document();
-        $document->loadHtml($body);
+        $document = new Document($body);
 
         $h1Element = $document->first('h1');
-        $h1 = $h1Element ? trim($h1Element->text) : null;
+        $h1 = $h1Element ? trim($h1Element->text()) : null;
 
         $titleElement = $document->first('title');
-        $title = $titleElement ? trim($titleElement->text) : null;
+        $title = $titleElement ? trim($titleElement->text()) : null;
 
         $description = null;
         $descriptionTag = $document->first('meta[name=description]');
@@ -232,12 +231,14 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
 
         $this->get(UrlCheckRepository::class)->addCheck($urlId, $statusCode, $h1, $title, $description);
         $this->get('flash')->addMessage('success', 'Страница успешно проверена');
-    } catch (RequestException | ConnectException $e) {
-        $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке, не удалось подключиться');
+    } catch (Exception $e) {
+        $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке: ' . $e->getMessage());
         error_log('Check error: ' . $e->getMessage());
     }
 
-    return $response->withStatus(302)->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
+    return $response
+        ->withStatus(302)
+        ->withHeader('Location', $this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
 })->setName('urls.check');
 
 $app->run();

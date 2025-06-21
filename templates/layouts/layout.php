@@ -37,7 +37,6 @@
     $content = $content ?? '';
     ?>
     
-    <!-- КРИТИЧНОЕ ИЗМЕНЕНИЕ: вывод flash-сообщений перенесен в самое начало body -->
     <?php if (!empty($flash['success'])) : ?>
         <div class="alert alert-success"><?= htmlspecialchars($flash['success'][0]) ?></div>
     <?php endif; ?>
