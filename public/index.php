@@ -77,11 +77,19 @@ $container->set('renderer', function ($container) {
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
 $errorMiddleware->setErrorHandler(
     HttpNotFoundException::class,
-    function ($request, $exception, $displayErrorDetails) {
+    function ($request, $exception, $displayErrorDetails) use ($app) {
         $response = new \Slim\Psr7\Response();
-        return $this->get('renderer')->render($response->withStatus(404), "404.phtml");
+        return $app->getContainer()->get('renderer')->render($response->withStatus(404), "errors/404.phtml");
     }
 );
+
+$app->add(function ($request, $handler) {
+    $response = $handler->handle($request);
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+    return $response;
+});
 
 $app->get('/', function ($request, $response) {
     $params = [
@@ -119,7 +127,7 @@ $app->get('/urls/{id:[0-9]+}', function ($request, $response, $args) {
     $url = $this->get(UrlRepository::class)->find($id);
 
     if (is_null($url)) {
-        return $this->get('renderer')->render($response->withStatus(404), "404.phtml");
+        return $this->get('renderer')->render($response->withStatus(404), "errors/404.phtml");
     }
 
     $params = [
@@ -183,7 +191,7 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
     $url = $this->get(UrlRepository::class)->find($urlId);
 
     if (!$url) {
-        return $this->get('renderer')->render($response->withStatus(404), "404.phtml");
+        return $this->get('renderer')->render($response->withStatus(404), "errors/404.phtml");
     }
 
     $client = new Client([
@@ -207,37 +215,35 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $statusCode = $responseResult->getStatusCode();
         $body = $responseResult->getBody()->getContents();
 
-        // Определяем кодировку страницы
         $contentType = $responseResult->getHeaderLine('Content-Type');
         $charset = 'UTF-8';
         if (preg_match('/charset=([\w-]+)/i', $contentType, $matches)) {
             $charset = strtoupper($matches[1]);
         }
 
-        // Конвертируем в UTF-8 если нужно
-        if ($charset !== 'UTF-8' && function_exists('mb_convert_encoding')) {
-            $body = mb_convert_encoding($body, 'UTF-8', $charset);
+        if ($charset !== 'UTF-8') {
+            if (function_exists('mb_convert_encoding')) {
+                $body = mb_convert_encoding($body, 'UTF-8', $charset);
+            } elseif (function_exists('iconv')) {
+                $body = iconv($charset, 'UTF-8//IGNORE', $body);
+            }
         }
 
-        // Создаем документ из строки
         $document = new Document();
         $document->loadHtml($body);
 
-        // Извлекаем h1
         $h1 = null;
         $h1Element = $document->first('h1');
         if ($h1Element) {
             $h1 = trim($h1Element->text);
         }
 
-        // Извлекаем title
         $title = null;
         $titleElement = $document->first('title');
         if ($titleElement) {
             $title = trim($titleElement->text);
         }
 
-        // Извлекаем description
         $description = null;
         $descriptionTag = $document->first('meta[name=description]');
         if ($descriptionTag) {
@@ -247,7 +253,6 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
             }
         }
 
-        // Если не нашли description, ищем meta[property="og:description"]
         if (!$description) {
             $ogDescriptionTag = $document->first('meta[property="og:description"]');
             if ($ogDescriptionTag) {
@@ -271,7 +276,7 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         error_log('Unexpected error: ' . $e->getMessage());
     }
 
-    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
+    return $response->withStatus(302)->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
 })->setName('urls.check');
 
 $app->run();
