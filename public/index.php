@@ -209,15 +209,15 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $document = new Document($body);
 
         $h1Element = $document->first('h1');
-        $h1 = $h1Element ? trim($h1Element->text()) : null;
+        $h1 = $h1Element ? trim($h1Element->textContent) : null;
 
         $titleElement = $document->first('title');
-        $title = $titleElement ? trim($titleElement->text()) : null;
+        $title = $titleElement ? trim($titleElement->textContent) : null;
 
         $descriptionTag = $document->first('meta[name=description]')
             ?: $document->first('meta[property="og:description"]');
         $description = $descriptionTag
-            ? trim($descriptionTag->getAttribute('content'))
+            ? trim((string)$descriptionTag->getAttribute('content'))
             : null;
 
         $this->get(UrlCheckRepository::class)->addCheck($urlId, $statusCode, $h1, $title, $description);
