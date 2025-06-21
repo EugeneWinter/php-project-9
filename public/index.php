@@ -176,9 +176,7 @@ $app->post('/urls', function ($request, $response) {
     if (!is_null($url)) {
         $this->get('flash')->addMessage('success', 'Страница уже существует');
         $id = $url->getId();
-        return $this->get('flash')->addMessageToResponse(
-            $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $id]))
-        );
+        return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $id]));
     }
 
     $url = new Url($normalizedUrl);
@@ -186,9 +184,7 @@ $app->post('/urls', function ($request, $response) {
     $id = $url->getId();
     $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
 
-    return $this->get('flash')->addMessageToResponse(
-        $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $id]))
-    );
+    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $id]));
 })->setName('urls.store');
 
 $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args) {
@@ -233,9 +229,7 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         error_log('Check error: ' . $e->getMessage());
     }
 
-    return $this->get('flash')->addMessageToResponse(
-        $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]))
-    );
+    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
 })->setName('urls.check');
 
 $app->run();
