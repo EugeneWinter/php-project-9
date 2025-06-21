@@ -23,15 +23,17 @@ session_start();
 $container = new Container();
 
 $container->set(PDO::class, function () {
-    $host = getenv('DB_HOST') ?: 'db';
-    $port = getenv('DB_PORT') ?: 5432;
-    $dbName = getenv('DB_NAME') ?: 'postgres';
-    $user = getenv('DB_USER') ?: 'postgres';
-    $pass = getenv('DB_PASSWORD') ?: 'postgres';
+    $databaseUrl = parse_url($_ENV['DATABASE_URL']);
 
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbName";
+    $dbHost = $databaseUrl['host'];
+    $dbPort = $databaseUrl['port'] ?? '5432';
+    $dbName = ltrim($databaseUrl['path'], '/');
+    $dbUser = $databaseUrl['user'];
+    $dbPass = $databaseUrl['pass'];
 
-    $connection = new PDO($dsn, $user, $pass, [
+    $dsn = "pgsql:host={$dbHost};port={$dbPort};dbname={$dbName}";
+
+    $connection = new PDO($dsn, $dbUser, $dbPass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false
