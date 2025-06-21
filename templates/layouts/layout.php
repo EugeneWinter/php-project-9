@@ -37,6 +37,17 @@
     $content = $content ?? '';
     ?>
     
+    <!-- КРИТИЧНОЕ ИЗМЕНЕНИЕ: вывод flash-сообщений перенесен в самое начало body -->
+    <?php if (!empty($flash['success'])) : ?>
+        <div class="alert alert-success"><?= htmlspecialchars($flash['success'][0]) ?></div>
+    <?php endif; ?>
+    <?php if (!empty($flash['info'])) : ?>
+        <div class="alert alert-success"><?= htmlspecialchars($flash['info'][0]) ?></div>
+    <?php endif; ?>
+    <?php if (!empty($flash['error'])) : ?>
+        <div class="alert alert-danger"><?= htmlspecialchars($flash['error'][0]) ?></div>
+    <?php endif; ?>
+
     <header class="flex-shrink-0">
         <nav class="navbar navbar-expand-md navbar-dark navbar-success px-3">
             <a class="navbar-brand" href="/">Анализатор страниц</a>
@@ -58,18 +69,6 @@
             </div>
         </nav>
     </header>
-
-    <div class="container-lg mt-3">
-        <?php if (!empty($flash['success'])) : ?>
-            <div class="alert alert-success"><?= htmlspecialchars($flash['success'][0]) ?></div>
-        <?php endif; ?>
-        <?php if (!empty($flash['info'])) : ?>
-            <div class="alert alert-success"><?= htmlspecialchars($flash['info'][0]) ?></div>
-        <?php endif; ?>
-        <?php if (!empty($flash['error'])) : ?>
-            <div class="alert alert-danger"><?= htmlspecialchars($flash['error'][0]) ?></div>
-        <?php endif; ?>
-    </div>
 
     <?= $content ?>
 </body>

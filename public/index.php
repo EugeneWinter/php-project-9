@@ -237,8 +237,7 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         error_log('Check error: ' . $e->getMessage());
     }
 
-    return $response->withStatus(302)->withRedirect($this->get('router')->
-    urlFor('urls.show', ['id' => (string) $urlId]));
+    return $response->withStatus(302)->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
 })->setName('urls.check');
 
 $app->run();
