@@ -150,18 +150,9 @@ $app->post('/urls', function ($request, $response) {
     }
 
     $parsedUrl = parse_url($urlString);
-    if (!isset($parsedUrl['scheme'], $parsedUrl['host'])) {
-        $errors['name'] = ['Некорректный URL'];
-        $params = [
-            'errors' => $errors,
-            'url' => $urlData
-        ];
-        return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
-    }
-
     $normalizedUrl = mb_strtolower("{$parsedUrl['scheme']}://{$parsedUrl['host']}");
-    $url = $this->get(UrlRepository::class)->findByName($normalizedUrl);
 
+    $url = $this->get(UrlRepository::class)->findByName($normalizedUrl);
     if ($url) {
         $this->get('flash')->addMessage('success', 'Страница уже существует');
         return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => $url->getId()]));
@@ -171,7 +162,7 @@ $app->post('/urls', function ($request, $response) {
     $this->get(UrlRepository::class)->save($url);
     $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
     return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => $url->getId()]));
-})->setName('urls.store');
+});
 
 $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args) {
     $urlId = $args['url_id'];
@@ -186,16 +177,12 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $responseResult = $client->get($url->getName());
         $document = new Document($responseResult->getBody()->getContents());
 
-        $h1 = optional($document->first('h1'))->text();
-        $title = optional($document->first('title'))->text();
-        $description = optional($document->first('meta[name=description]'))->attr('content');
-
         $this->get(UrlCheckRepository::class)->addCheck(
             $urlId,
             $responseResult->getStatusCode(),
-            $h1,
-            $title,
-            $description
+            optional($document->first('h1'))->text(),
+            optional($document->first('title'))->text(),
+            optional($document->first('meta[name=description]'))->attr('content')
         );
         $this->get('flash')->addMessage('success', 'Страница успешно проверена');
     } catch (Exception $e) {
@@ -203,6 +190,6 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
     }
 
     return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => $urlId]));
-})->setName('urls.check');
+});
 
 $app->run();

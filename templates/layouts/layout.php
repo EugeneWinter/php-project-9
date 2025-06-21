@@ -28,9 +28,17 @@
             background-color:rgb(12, 110, 64);
             border-radius: 4px;
         }
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        main {
+            flex-grow: 1;
+        }
     </style>
 </head>
-<body class="min-vh-100 d-flex flex-column">
+<body class="d-flex flex-column min-vh-100">
     <header class="flex-shrink-0">
         <nav class="navbar navbar-expand-md navbar-dark navbar-success px-3">
             <a class="navbar-brand" href="/">Анализатор страниц</a>
@@ -41,11 +49,11 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link <?= $currentRoute == '/' ? 'active' : '' ?>"
+                        <a class="nav-link <?= isset($currentRoute) && $currentRoute == '/' ? 'active' : '' ?>"
                            href="/">Главная</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= $currentRoute == 'urls.index' ? 'active' : '' ?>"
+                        <a class="nav-link <?= isset($currentRoute) && $currentRoute == 'urls.index' ? 'active' : '' ?>"
                            href="/urls">Сайты</a>
                     </li>
                 </ul>
@@ -56,5 +64,11 @@
     <main class="flex-grow-1">
         <?= $content ?>
     </main>
+
+    <footer class="border-top py-3 mt-5 bg-success text-white">
+        <div class="container-lg text-center">
+            Самая большая пицца была приготовлена в 2017 году в Риме — её диаметр составил 40 метров, а вес — более 20 тонн.
+        </div>
+    </footer>
 </body>
 </html>
