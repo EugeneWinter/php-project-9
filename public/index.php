@@ -66,12 +66,6 @@ $container->set('router', fn() => $app->getRouteCollector()->getRouteParser());
 $container->set('renderer', function ($container) {
     $renderer = new PhpRenderer(__DIR__ . '/../templates', ['router' => $container->get('router')]);
     $renderer->setLayout('layouts/layout.php');
-
-    $renderer->addAttribute('getCurrentRoute', function ($request) {
-        $routeContext = RouteContext::fromRequest($request);
-        $route = $routeContext->getRoute();
-        return $route ? $route->getName() : '';
-    });
     return $renderer;
 });
 
@@ -94,10 +88,8 @@ $app->add(function ($request, $handler) {
 
 $app->get('/', function ($request, $response) {
     $params = [
-        'currentRoute' => $this->get('renderer')->getAttribute('getCurrentRoute')($request),
-        'url' => ['name' => ''],
+        'url' => ['name' => '']
     ];
-
     return $this->get('renderer')->render($response, 'index.phtml', $params);
 })->setName('/');
 
@@ -115,8 +107,7 @@ $app->get('/urls', function ($request, $response) {
 
     $params = [
         'urls' => $urls,
-        'lastChecks' => $lastChecksIndexed,
-        'currentRoute' => $this->get('renderer')->getAttribute('getCurrentRoute')($request),
+        'lastChecks' => $lastChecksIndexed
     ];
     return $this->get('renderer')->render($response, 'urls/index.phtml', $params);
 })->setName('urls.index');
@@ -126,15 +117,14 @@ $app->get('/urls/{id:[0-9]+}', function ($request, $response, $args) {
     $id = $args['id'];
 
     $url = $this->get(UrlRepository::class)->find($id);
-
     if (is_null($url)) {
         return $this->get('renderer')->render($response->withStatus(404), "errors/404.phtml");
     }
 
     $params = [
+        'flash' => $messages,
         'url' => $url,
-        'checkData' => $this->get(UrlCheckRepository::class)->getChecks($args['id']),
-        'flash' => $messages
+        'checkData' => $this->get(UrlCheckRepository::class)->getChecks($args['id'])
     ];
 
     return $this->get('renderer')->render($response, 'urls/show.phtml', $params);
@@ -172,18 +162,15 @@ $app->post('/urls', function ($request, $response) {
     $normalizedUrl = mb_strtolower("{$parsedUrl['scheme']}://{$parsedUrl['host']}");
     $url = $this->get(UrlRepository::class)->findByName($normalizedUrl);
 
-    if (!is_null($url)) {
+    if ($url) {
         $this->get('flash')->addMessage('success', 'Страница уже существует');
-        $id = $url->getId();
-        return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $id]));
+        return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => $url->getId()]));
     }
 
     $url = new Url($normalizedUrl);
     $this->get(UrlRepository::class)->save($url);
-    $id = $url->getId();
     $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
-
-    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $id]));
+    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => $url->getId()]));
 })->setName('urls.store');
 
 $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args) {
@@ -194,41 +181,28 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         return $this->get('renderer')->render($response->withStatus(404), "errors/404.phtml");
     }
 
-    $client = new Client([
-        'timeout' => 5,
-        'connect_timeout' => 3,
-        'http_errors' => false
-    ]);
-
+    $client = new Client(['timeout' => 5, 'connect_timeout' => 3]);
     try {
         $responseResult = $client->get($url->getName());
-        $statusCode = $responseResult->getStatusCode();
-        $body = $responseResult->getBody()->getContents();
+        $document = new Document($responseResult->getBody()->getContents());
 
-        $document = new Document($body);
+        $h1 = optional($document->first('h1'))->text();
+        $title = optional($document->first('title'))->text();
+        $description = optional($document->first('meta[name=description]'))->attr('content');
 
-        $h1Element = $document->first('h1');
-        $h1 = $h1Element ? trim($h1Element->textContent) : null;
-
-        $titleElement = $document->first('title');
-        $title = $titleElement ? trim($titleElement->textContent) : null;
-
-        $descriptionTag = $document->first('meta[name=description]')
-            ?: $document->first('meta[property="og:description"]');
-        $description = $descriptionTag
-            ? trim((string)$descriptionTag->getAttribute('content'))
-            : null;
-
-        $this->get(UrlCheckRepository::class)->addCheck($urlId, $statusCode, $h1, $title, $description);
+        $this->get(UrlCheckRepository::class)->addCheck(
+            $urlId,
+            $responseResult->getStatusCode(),
+            $h1,
+            $title,
+            $description
+        );
         $this->get('flash')->addMessage('success', 'Страница успешно проверена');
-    } catch (ConnectException $e) {
-        $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке, не удалось подключиться');
     } catch (Exception $e) {
-        $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке: ' . $e->getMessage());
-        error_log('Check error: ' . $e->getMessage());
+        $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке');
     }
 
-    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
+    return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => $urlId]));
 })->setName('urls.check');
 
 $app->run();
