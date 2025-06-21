@@ -191,25 +191,56 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         'connect_timeout' => 3,
         'headers' => [
             'User-Agent' => 'Mozilla/5.0 (compatible; PageAnalyzerBot/1.0)'
-        ]
+        ],
+        'http_errors' => false
     ]);
 
     try {
         $responseResult = $client->get($url->getName());
         $statusCode = $responseResult->getStatusCode();
         $body = $responseResult->getBody()->getContents();
+
+        $contentType = $responseResult->getHeaderLine('Content-Type');
+        $charset = 'UTF-8';
+        if (preg_match('/charset=([\w-]+)/i', $contentType, $matches)) {
+            $charset = strtoupper($matches[1]);
+        }
+
+        if ($charset !== 'UTF-8' && function_exists('mb_convert_encoding')) {
+            $body = mb_convert_encoding($body, 'UTF-8', $charset);
+        }
+
         $document = new Document($body);
 
+        $h1 = null;
         $h1Element = $document->first('h1');
-        $h1 = $h1Element ? $h1Element->text : null;
+        if ($h1Element) {
+            $h1 = trim($h1Element->text());
+        }
 
+        $title = null;
         $titleElement = $document->first('title');
-        $title = $titleElement ? $titleElement->text : null;
+        if ($titleElement) {
+            $title = trim($titleElement->text());
+        }
 
         $description = null;
         $descriptionTag = $document->first('meta[name=description]');
         if ($descriptionTag) {
             $description = $descriptionTag->getAttribute('content');
+            if ($description) {
+                $description = trim($description);
+            }
+        }
+
+        if (!$description) {
+            $ogDescriptionTag = $document->first('meta[property="og:description"]');
+            if ($ogDescriptionTag) {
+                $description = $ogDescriptionTag->getAttribute('content');
+                if ($description) {
+                    $description = trim($description);
+                }
+            }
         }
 
         $this->get(UrlCheckRepository::class)->addCheck($urlId, $statusCode, $h1, $title, $description);
@@ -217,6 +248,9 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
     } catch (RequestException | ConnectException $e) {
         $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке, не удалось подключиться');
         error_log('Check error: ' . $e->getMessage());
+    } catch (Exception $e) {
+        $this->get('flash')->addMessage('error', 'Произошла ошибка при обработке страницы');
+        error_log('Processing error: ' . $e->getMessage());
     }
 
     return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
