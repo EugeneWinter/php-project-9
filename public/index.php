@@ -17,32 +17,24 @@ use Slim\Flash\Messages;
 use Slim\Routing\RouteContext;
 use Slim\Views\PhpRenderer;
 use Psr\Container\ContainerInterface;
-use Dotenv\Dotenv;
-
-$dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
-$dotenv->load();
-$dotenv->required('DATABASE_URL')->notEmpty();
 
 session_start();
 
 $container = new Container();
 
 $container->set(PDO::class, function () {
-    $databaseUrl = parse_url($_ENV['DATABASE_URL']);
+    $host = getenv('DB_HOST') ?: 'db';
+    $port = getenv('DB_PORT') ?: 5432;
+    $dbName = getenv('DB_NAME') ?: 'postgres';
+    $user = getenv('DB_USER') ?: 'postgres';
+    $pass = getenv('DB_PASSWORD') ?: 'postgres';
 
-    $host = $databaseUrl['host'] ?? 'localhost';
-    $port = $databaseUrl['port'] ?? 5432;
-    $dbName = ltrim($databaseUrl['path'] ?? '', '/');
-    $user = $databaseUrl['user'] ?? '';
-    $pass = $databaseUrl['pass'] ?? '';
-
-    $dsn = "pgsql:host={$host};port={$port};dbname={$dbName}";
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbName";
 
     $connection = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-        PDO::ATTR_STRINGIFY_FETCHES => false
+        PDO::ATTR_EMULATE_PREPARES => false
     ]);
 
     return $connection;
