@@ -201,10 +201,10 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $document = new Document($body);
 
         $h1Element = $document->first('h1');
-        $h1 = $h1Element ? $h1Element->text() : null;
+        $h1 = $h1Element ? $h1Element->text : null;
 
         $titleElement = $document->first('title');
-        $title = $titleElement ? $titleElement->text() : null;
+        $title = $titleElement ? $titleElement->text : null;
 
         $description = null;
         $descriptionTag = $document->first('meta[name=description]');
