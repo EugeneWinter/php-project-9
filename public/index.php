@@ -192,7 +192,14 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         'headers' => [
             'User-Agent' => 'Mozilla/5.0 (compatible; PageAnalyzerBot/1.0)'
         ],
-        'http_errors' => false
+        'http_errors' => false,
+        'allow_redirects' => [
+            'max' => 5,
+            'strict' => true,
+            'referer' => true,
+            'protocols' => ['http', 'https'],
+            'track_redirects' => true
+        ]
     ]);
 
     try {
@@ -200,31 +207,37 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $statusCode = $responseResult->getStatusCode();
         $body = $responseResult->getBody()->getContents();
 
+        // Определяем кодировку страницы
         $contentType = $responseResult->getHeaderLine('Content-Type');
         $charset = 'UTF-8';
         if (preg_match('/charset=([\w-]+)/i', $contentType, $matches)) {
             $charset = strtoupper($matches[1]);
         }
 
+        // Конвертируем в UTF-8 если нужно
         if ($charset !== 'UTF-8' && function_exists('mb_convert_encoding')) {
             $body = mb_convert_encoding($body, 'UTF-8', $charset);
         }
 
+        // Создаем документ из строки
         $document = new Document();
         $document->loadHtml($body);
 
+        // Извлекаем h1
         $h1 = null;
         $h1Element = $document->first('h1');
         if ($h1Element) {
             $h1 = trim($h1Element->text);
         }
 
+        // Извлекаем title
         $title = null;
         $titleElement = $document->first('title');
         if ($titleElement) {
             $title = trim($titleElement->text);
         }
 
+        // Извлекаем description
         $description = null;
         $descriptionTag = $document->first('meta[name=description]');
         if ($descriptionTag) {
@@ -234,6 +247,7 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
             }
         }
 
+        // Если не нашли description, ищем meta[property="og:description"]
         if (!$description) {
             $ogDescriptionTag = $document->first('meta[property="og:description"]');
             if ($ogDescriptionTag) {
@@ -252,6 +266,9 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
     } catch (Exception $e) {
         $this->get('flash')->addMessage('error', 'Произошла ошибка при обработке страницы');
         error_log('Processing error: ' . $e->getMessage());
+    } catch (Throwable $e) {
+        $this->get('flash')->addMessage('error', 'Непредвиденная ошибка');
+        error_log('Unexpected error: ' . $e->getMessage());
     }
 
     return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => (string) $urlId]));
