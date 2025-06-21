@@ -15,59 +15,59 @@
 </head>
 <body class="min-vh-100 d-flex flex-column">
     <main class="flex-grow-1">
-        <div class="container-lg mt-3">
-            <h1>Сайт: <?= htmlspecialchars($url->getName()) ?></h1>
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover text-nowrap">
-                    <tbody>
+<div class="container-lg mt-3">
+    <h1>Сайт: <?= htmlspecialchars($url->getName()) ?></h1>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover text-nowrap">
+            <tbody>
+                <tr>
+                    <td>ID</td>
+                    <td><?= htmlspecialchars($url->getId()) ?></td>
+                </tr>
+                <tr>
+                    <td>Имя</td>
+                    <td><?= htmlspecialchars($url->getName()) ?></td>
+                </tr>
+                <tr>
+                    <td>Дата создания</td>
+                    <td><?= htmlspecialchars($url->getDate()) ?></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <h2 class="mt-5 mb-3">Проверки</h2>
+    <form method="post" action="/urls/<?= $url->getId() ?>/checks">
+        <button type="submit" class="btn btn-success">Запустить проверку</button>
+    </form>
+    <?php if (!empty($checkData)): ?>
+        <div class="table-responsive mt-3">
+            <table class="table table-bordered table-hover" data-test="checks">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Код ответа</th>
+                        <th>h1</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Дата проверки</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($checkData as $check): ?>
                         <tr>
-                            <td>ID</td>
-                            <td><?= htmlspecialchars($url->getId()) ?></td>
+                            <td><?= htmlspecialchars($check->getId()) ?></td>
+                            <td><?= htmlspecialchars($check->getStatusCode()) ?></td>
+                            <td><?= htmlspecialchars($check->getH1() ?? '') ?></td>
+                            <td><?= htmlspecialchars($check->getTitle() ?? '') ?></td>
+                            <td><?= htmlspecialchars($check->getDescription() ?? '') ?></td>
+                            <td><?= htmlspecialchars($check->getCheckDate()) ?></td>
                         </tr>
-                        <tr>
-                            <td>Имя</td>
-                            <td><?= htmlspecialchars($url->getName()) ?></td>
-                        </tr>
-                        <tr>
-                            <td>Дата создания</td>
-                            <td><?= htmlspecialchars($url->getDate()) ?></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <h2 class="mt-5 mb-3">Проверки</h2>
-            <form method="post" action="/urls/<?= $url->getId() ?>/checks">
-                <button type="submit" class="btn btn-success">Запустить проверку</button>
-            </form>
-            <?php if (!empty($checkData)): ?>
-                <div class="table-responsive mt-3">
-                    <table class="table table-bordered table-hover" data-test="checks">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Код ответа</th>
-                                <th>h1</th>
-                                <th>Title</th>
-                                <th>Description</th>
-                                <th>Дата проверки</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($checkData as $check): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($check->getId()) ?></td>
-                                    <td><?= htmlspecialchars($check->getStatusCode()) ?></td>
-                                    <td><?= htmlspecialchars($check->getH1() ?? '') ?></td>
-                                    <td><?= htmlspecialchars($check->getTitle() ?? '') ?></td>
-                                    <td><?= htmlspecialchars($check->getDescription() ?? '') ?></td>
-                                    <td><?= htmlspecialchars($check->getCheckDate()) ?></td>
-                                </tr>
-                            <?php endforeach ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif ?>
+                    <?php endforeach ?>
+                </tbody>
+            </table>
         </div>
+    <?php endif ?>
+</div>
     </main>
     <footer class="border-top py-3 mt-5 bg-success flex-shrink-0 text-white">
         <div class="container-lg text-center">

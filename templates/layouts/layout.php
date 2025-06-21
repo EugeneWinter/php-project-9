@@ -31,16 +31,6 @@
     </style>
 </head>
 <body class="min-vh-100 d-flex flex-column">
-    <?php if (!empty($flash['success'])) : ?>
-        <div class="alert alert-success"><?= htmlspecialchars($flash['success'][0]) ?></div>
-    <?php endif; ?>
-    <?php if (!empty($flash['info'])) : ?>
-        <div class="alert alert-success"><?= htmlspecialchars($flash['info'][0]) ?></div>
-    <?php endif; ?>
-    <?php if (!empty($flash['error'])) : ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($flash['error'][0]) ?></div>
-    <?php endif; ?>
-
     <header class="flex-shrink-0">
         <nav class="navbar navbar-expand-md navbar-dark navbar-success px-3">
             <a class="navbar-brand" href="/">Анализатор страниц</a>
@@ -63,6 +53,14 @@
         </nav>
     </header>
 
-    <?= $content ?>
+    <main class="flex-grow-1">
+        <?php if (!empty($flash['success'])) : ?>
+            <div class="alert alert-success" data-test="flash"><?= htmlspecialchars($flash['success'][0]) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($flash['error'])) : ?>
+            <div class="alert alert-danger" data-test="flash"><?= htmlspecialchars($flash['error'][0]) ?></div>
+        <?php endif; ?>
+        <?= $content ?>
+    </main>
 </body>
 </html>

@@ -132,9 +132,9 @@ $app->get('/urls/{id:[0-9]+}', function ($request, $response, $args) {
     }
 
     $params = [
-        'flash' => $messages,
         'url' => $url,
         'checkData' => $this->get(UrlCheckRepository::class)->getChecks($args['id']),
+        'flash' => $messages
     ];
 
     return $this->get('renderer')->render($response, 'urls/show.phtml', $params);
