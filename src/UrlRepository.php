@@ -56,7 +56,7 @@ class UrlRepository
             $url->setDate($row['created_at']);
             return $url;
         }
-        
+
         return null;
     }
 

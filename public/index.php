@@ -19,7 +19,7 @@ use Slim\Views\PhpRenderer;
 use Psr\Container\ContainerInterface;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
 $dotenv->load();
 $dotenv->required('DATABASE_URL')->notEmpty();
 
@@ -29,7 +29,7 @@ $container = new Container();
 
 $container->set(PDO::class, function () {
     $databaseUrl = parse_url($_ENV['DATABASE_URL']);
-    
+
     $host = $databaseUrl['host'] ?? 'localhost';
     $port = $databaseUrl['port'] ?? 5432;
     $dbName = ltrim($databaseUrl['path'] ?? '', '/');
@@ -37,14 +37,14 @@ $container->set(PDO::class, function () {
     $pass = $databaseUrl['pass'] ?? '';
 
     $dsn = "pgsql:host={$host};port={$port};dbname={$dbName}";
-    
+
     $connection = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
         PDO::ATTR_STRINGIFY_FETCHES => false
     ]);
-    
+
     return $connection;
 });
 
@@ -187,7 +187,7 @@ $app->post('/urls', function ($request, $response) {
 $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args) {
     $urlId = $args['url_id'];
     $url = $this->get(UrlRepository::class)->find($urlId);
-    
+
     if (!$url) {
         return $this->get('renderer')->render($response->withStatus(404), "404.phtml");
     }
@@ -205,16 +205,16 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $statusCode = $responseResult->getStatusCode();
         $body = $responseResult->getBody()->getContents();
         $document = new Document($body);
-        
+
         $h1 = $document->first('h1') ? $document->first('h1')->text() : null;
         $title = $document->first('title') ? $document->first('title')->text() : null;
-        
+
         $description = null;
         $descriptionTag = $document->first('meta[name=description]');
         if ($descriptionTag) {
             $description = $descriptionTag->getAttribute('content');
         }
-        
+
         $this->get(UrlCheckRepository::class)->addCheck($urlId, $statusCode, $h1, $title, $description);
         $this->get('flash')->addMessage('success', 'Страница успешно проверена');
     } catch (RequestException | ConnectException $e) {
