@@ -31,6 +31,12 @@
     </style>
 </head>
 <body class="min-vh-100 d-flex flex-column">
+    <?php
+    $currentRoute = $currentRoute ?? '';
+    $flash = $flash ?? [];
+    $content = $content ?? '';
+    ?>
+    
     <header class="flex-shrink-0">
         <nav class="navbar navbar-expand-md navbar-dark navbar-success px-3">
             <a class="navbar-brand" href="/">Анализатор страниц</a>
