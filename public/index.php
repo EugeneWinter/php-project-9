@@ -1,5 +1,8 @@
 <?php
 
+session_start();
+session_regenerate_id(true);
+
 require __DIR__ . '/../vendor/autoload.php';
 
 use App\Url;
@@ -17,8 +20,6 @@ use Slim\Flash\Messages;
 use Slim\Routing\RouteContext;
 use Slim\Views\PhpRenderer;
 use Psr\Container\ContainerInterface;
-
-session_start();
 
 $container = new Container();
 
@@ -268,10 +269,10 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
     } catch (RequestException | ConnectException $e) {
         $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке, не удалось подключиться');
         error_log('Check error: ' . $e->getMessage());
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         $this->get('flash')->addMessage('error', 'Произошла ошибка при обработке страницы');
         error_log('Processing error: ' . $e->getMessage());
-    } catch (Throwable $e) {
+    } catch (\Throwable $e) {
         $this->get('flash')->addMessage('error', 'Непредвиденная ошибка');
         error_log('Unexpected error: ' . $e->getMessage());
     }
