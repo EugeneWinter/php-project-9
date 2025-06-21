@@ -209,28 +209,21 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $document = new Document($body);
 
         $h1Element = $document->first('h1');
-        $h1 = $h1Element ? trim($h1Element->textContent) : null;
+        $h1 = $h1Element ? trim($h1Element->text()) : null;
 
         $titleElement = $document->first('title');
-        $title = $titleElement ? trim($titleElement->textContent) : null;
+        $title = $titleElement ? trim($titleElement->text()) : null;
 
-        $description = null;
-        $descriptionTag = $document->first('meta[name=description]');
-        if ($descriptionTag) {
-            $description = $descriptionTag->getAttribute('content');
-            $description = $description ? trim($description) : null;
-        }
-
-        if (!$description) {
-            $ogDescriptionTag = $document->first('meta[property="og:description"]');
-            if ($ogDescriptionTag) {
-                $description = $ogDescriptionTag->getAttribute('content');
-                $description = $description ? trim($description) : null;
-            }
-        }
+        $descriptionTag = $document->first('meta[name=description]')
+            ?: $document->first('meta[property="og:description"]');
+        $description = $descriptionTag
+            ? trim($descriptionTag->getAttribute('content'))
+            : null;
 
         $this->get(UrlCheckRepository::class)->addCheck($urlId, $statusCode, $h1, $title, $description);
         $this->get('flash')->addMessage('success', 'Страница успешно проверена');
+    } catch (ConnectException $e) {
+        $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке, не удалось подключиться');
     } catch (Exception $e) {
         $this->get('flash')->addMessage('error', 'Произошла ошибка при проверке: ' . $e->getMessage());
         error_log('Check error: ' . $e->getMessage());
