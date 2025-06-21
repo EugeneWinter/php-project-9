@@ -31,12 +31,6 @@
     </style>
 </head>
 <body class="min-vh-100 d-flex flex-column">
-    <?php
-    $currentRoute = $currentRoute ?? '';
-    $flash = $flash ?? [];
-    $content = $content ?? '';
-    ?>
-    
     <?php if (!empty($flash['success'])) : ?>
         <div class="alert alert-success"><?= htmlspecialchars($flash['success'][0]) ?></div>
     <?php endif; ?>
