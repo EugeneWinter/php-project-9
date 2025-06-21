@@ -59,15 +59,17 @@
         </nav>
     </header>
 
-    <?php if (!empty($flash['success'])) : ?>
-        <div class="alert alert-success"><?= htmlspecialchars($flash['success'][0]) ?></div>
-    <?php endif; ?>
-    <?php if (!empty($flash['info'])) : ?>
-        <div class="alert alert-success"><?= htmlspecialchars($flash['info'][0]) ?></div>
-    <?php endif; ?>
-    <?php if (!empty($flash['error'])) : ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($flash['error'][0]) ?></div>
-    <?php endif; ?>
+    <div class="container-lg mt-3">
+        <?php if (!empty($flash['success'])) : ?>
+            <div class="alert alert-success"><?= htmlspecialchars($flash['success'][0]) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($flash['info'])) : ?>
+            <div class="alert alert-success"><?= htmlspecialchars($flash['info'][0]) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($flash['error'])) : ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($flash['error'][0]) ?></div>
+        <?php endif; ?>
+    </div>
 
     <?= $content ?>
 </body>
