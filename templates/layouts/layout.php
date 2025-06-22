@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Анализатор страниц</title>
+    <title><?= htmlspecialchars($pageTitle ?? 'Анализатор страниц') ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <style>
@@ -49,11 +49,11 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link <?= isset($currentRoute) && $currentRoute == '/' ? 'active' : '' ?>"
+                        <a class="nav-link <?= ($currentRoute ?? '') === '/' ? 'active' : '' ?>"
                            href="/">Главная</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= isset($currentRoute) && $currentRoute == 'urls.index' ? 'active' : '' ?>"
+                        <a class="nav-link <?= ($currentRoute ?? '') === 'urls.index' ? 'active' : '' ?>"
                            href="/urls">Сайты</a>
                     </li>
                 </ul>
@@ -62,9 +62,7 @@
     </header>
 
     <main class="flex-grow-1">
-        <?php if (isset($content)) : ?>
-            <?= $content ?>
-        <?php endif; ?>
+        <?= $content ?? '' ?>
     </main>
 
     <footer class="border-top py-3 mt-5 bg-success text-white">

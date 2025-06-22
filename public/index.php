@@ -178,15 +178,20 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $document = new Document($responseResult->getBody()->getContents());
 
         $h1Element = $document->first('h1');
+        $h1 = $h1Element ? trim((string)$h1Element->text()) : null;
+
         $titleElement = $document->first('title');
+        $title = $titleElement ? trim((string)$titleElement->text()) : null;
+
         $descriptionElement = $document->first('meta[name=description]');
+        $description = $descriptionElement ? trim((string)$descriptionElement->getAttribute('content')) : null;
 
         $this->get(UrlCheckRepository::class)->addCheck(
             $urlId,
             $responseResult->getStatusCode(),
-            $h1Element ? trim($h1Element->text()) : null,
-            $titleElement ? trim($titleElement->text()) : null,
-            $descriptionElement ? trim($descriptionElement->getAttribute('content')) : null
+            $h1,
+            $title,
+            $description
         );
         $this->get('flash')->addMessage('success', 'Страница успешно проверена');
     } catch (Exception $e) {
@@ -194,6 +199,6 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
     }
 
     return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => $urlId]));
-});
+})->setName('urls.check');
 
 $app->run();
