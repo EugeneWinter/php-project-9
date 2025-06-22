@@ -177,21 +177,32 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $responseResult = $client->get($url->getName());
         $document = new Document($responseResult->getBody()->getContents());
 
-        $h1Element = $document->first('h1');
-        $h1 = $h1Element ? trim((string)$h1Element->text()) : null;
+        $h1 = '';
+        if ($document->has('h1')) {
+            $h1Element = $document->first('h1');
+            $h1 = $h1Element instanceof \DiDom\Element ? trim($h1Element->text()) : '';
+        }
 
-        $titleElement = $document->first('title');
-        $title = $titleElement ? trim((string)$titleElement->text()) : null;
+        $title = '';
+        if ($document->has('title')) {
+            $titleElement = $document->first('title');
+            $title = $titleElement instanceof \DiDom\Element ? trim($titleElement->text()) : '';
+        }
 
-        $descriptionElement = $document->first('meta[name=description]');
-        $description = $descriptionElement ? trim((string)$descriptionElement->getAttribute('content')) : null;
+        $description = '';
+        if ($document->has('meta[name=description]')) {
+            $descElement = $document->first('meta[name=description]');
+            if ($descElement instanceof \DiDom\Element) {
+                $description = trim($descElement->attr('content') ?? '');
+            }
+        }
 
         $this->get(UrlCheckRepository::class)->addCheck(
             $urlId,
             $responseResult->getStatusCode(),
-            $h1,
-            $title,
-            $description
+            $h1 ?: null,
+            $title ?: null,
+            $description ?: null
         );
         $this->get('flash')->addMessage('success', 'Страница успешно проверена');
     } catch (Exception $e) {
