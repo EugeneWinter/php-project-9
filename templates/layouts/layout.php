@@ -64,11 +64,5 @@
     <main class="flex-grow-1">
         <?= $content ?? '' ?>
     </main>
-
-    <footer class="border-top py-3 mt-5 bg-success text-white">
-        <div class="container-lg text-center">
-            Самая большая пицца была приготовлена в 2017 году в Риме — её диаметр составил 40 метров, а вес — более 20 тонн.
-        </div>
-    </footer>
 </body>
 </html>
