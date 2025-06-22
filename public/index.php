@@ -177,12 +177,16 @@ $app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args)
         $responseResult = $client->get($url->getName());
         $document = new Document($responseResult->getBody()->getContents());
 
+        $h1Element = $document->first('h1');
+        $titleElement = $document->first('title');
+        $descriptionElement = $document->first('meta[name=description]');
+
         $this->get(UrlCheckRepository::class)->addCheck(
             $urlId,
             $responseResult->getStatusCode(),
-            optional($document->first('h1'))->text(),
-            optional($document->first('title'))->text(),
-            optional($document->first('meta[name=description]'))->attr('content')
+            $h1Element ? trim($h1Element->text()) : null,
+            $titleElement ? trim($titleElement->text()) : null,
+            $descriptionElement ? trim($descriptionElement->getAttribute('content')) : null
         );
         $this->get('flash')->addMessage('success', 'Страница успешно проверена');
     } catch (Exception $e) {

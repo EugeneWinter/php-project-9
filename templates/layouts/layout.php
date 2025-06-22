@@ -62,7 +62,9 @@
     </header>
 
     <main class="flex-grow-1">
-        <?= $content ?>
+        <?php if (isset($content)) : ?>
+            <?= $content ?>
+        <?php endif; ?>
     </main>
 
     <footer class="border-top py-3 mt-5 bg-success text-white">
