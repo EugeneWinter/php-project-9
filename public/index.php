@@ -124,7 +124,7 @@ $app->get('/urls/{id:[0-9]+}', function ($request, $response, $args) {
     $params = [
         'flash' => $messages,
         'url' => $url,
-        'checkData' => $this->get(UrlCheckRepository::class)->getChecks($args['id'])
+        'checkData' => $this->get(UrlCheckRepository::class)->getChecks($id)
     ];
 
     return $this->get('renderer')->render($response, 'urls/show.phtml', $params);
@@ -164,8 +164,8 @@ $app->post('/urls', function ($request, $response) {
     return $response->withRedirect($this->get('router')->urlFor('urls.show', ['id' => $url->getId()]));
 });
 
-$app->post('/urls/{url_id:[0-9]+}/checks', function ($request, $response, $args) {
-    $urlId = $args['url_id'];
+$app->post('/urls/{urlId:[0-9]+}/checks', function ($request, $response, $args) {
+    $urlId = $args['urlId'];
     $url = $this->get(UrlRepository::class)->find($urlId);
 
     if (!$url) {

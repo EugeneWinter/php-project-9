@@ -13,28 +13,28 @@ class UrlCheckRepository
         $this->connection = $connection;
     }
 
-    public function addCheck(int $url_id, int $status_code, ?string $h1, ?string $title, ?string $description): void
+    public function addCheck(int $urlId, int $statusCode, ?string $h1, ?string $title, ?string $description): void
     {
         $sql = "INSERT INTO url_checks (url_id, status_code, h1, title, description, created_at) 
         VALUES (:url_id, :status_code, :h1, :title, :description, :created_at)";
         $stmt = $this->connection->prepare($sql);
-        $created_at = date('Y-m-d H:i:s');
+        $createdAt = date('Y-m-d H:i:s');
         $stmt->execute([
-            ':url_id' => $url_id,
-            ':status_code' => $status_code,
+            ':url_id' => $urlId,
+            ':status_code' => $statusCode,
             ':h1' => $h1,
             ':title' => $title,
             ':description' => $description,
-            ':created_at' => $created_at
+            ':created_at' => $createdAt
         ]);
     }
 
-    public function getChecks(int $url_id): array
+    public function getChecks(int $urlId): array
     {
         $checkData = [];
         $sql = "SELECT * FROM url_checks WHERE url_id = ? ORDER BY created_at DESC";
         $stmt = $this->connection->prepare($sql);
-        $stmt->execute([$url_id]);
+        $stmt->execute([$urlId]);
 
         while ($row = $stmt->fetch()) {
             $check = new UrlCheck();
@@ -51,11 +51,11 @@ class UrlCheckRepository
         return $checkData;
     }
 
-    public function getLastCheck(int $url_id): ?UrlCheck
+    public function getLastCheck(int $urlId): ?UrlCheck
     {
         $sql = "SELECT * FROM url_checks WHERE url_id = ? ORDER BY created_at DESC LIMIT 1";
         $stmt = $this->connection->prepare($sql);
-        $stmt->execute([$url_id]);
+        $stmt->execute([$urlId]);
 
         if ($row = $stmt->fetch()) {
             $lastCheck = new UrlCheck();

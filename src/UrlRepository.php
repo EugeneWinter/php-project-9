@@ -76,11 +76,11 @@ class UrlRepository
         return null;
     }
 
-    public function getUrlName(int $url_id): string
+    public function getUrlName(int $urlId): string
     {
         $sql = "SELECT name FROM urls WHERE id = ?";
         $stmt = $this->connection->prepare($sql);
-        $stmt->execute([$url_id]);
+        $stmt->execute([$urlId]);
 
         if ($row = $stmt->fetch()) {
             return $row['name'];
